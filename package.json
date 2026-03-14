@@ -1,0 +1,42 @@
+{
+  "name": "money-control-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev --name init",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.15.0",
+    "bcryptjs": "latest",
+    "clsx": "latest",
+    "date-fns": "latest",
+    "jsonwebtoken": "latest",
+    "next": "latest",
+    "prisma": "^5.15.0",
+    "react": "latest",
+    "react-dom": "latest",
+    "recharts": "latest",
+    "tailwind-merge": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "latest",
+    "@types/jsonwebtoken": "latest",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "autoprefixer": "^10.4.27",
+    "eslint": "latest",
+    "eslint-config-next": "latest",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^3.4.4",
+    "typescript": "latest"
+  }
+}
