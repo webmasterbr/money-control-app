@@ -23,25 +23,40 @@ export async function createExpense(userId: string, data: ExpenseInput) {
   });
 }
 
+type ExpenseUpdatePayload = Partial<
+  Omit<ExpenseInput, "dueDay"> & { dueDay: number | null }
+>;
+
 export async function updateExpense(
   userId: string,
   expenseId: string,
-  data: Partial<ExpenseInput>
+  data: ExpenseUpdatePayload
 ) {
+  const prismaData: Parameters<typeof prisma.expense.update>[0]["data"] = {};
+
+  if (data.amount !== undefined) prismaData.amount = data.amount;
+  if (data.category !== undefined) prismaData.category = data.category;
+  if (data.description !== undefined) {
+    prismaData.description = data.description || null;
+  }
+  if (data.date !== undefined) prismaData.date = new Date(data.date);
+  if (data.isFixed !== undefined) prismaData.isFixed = data.isFixed;
+  if (data.competenceMonth !== undefined) {
+    prismaData.competenceMonth = data.competenceMonth;
+  }
+
+  if (data.isFixed === false) {
+    prismaData.dueDay = null;
+  } else if (data.dueDay !== undefined) {
+    prismaData.dueDay = data.dueDay;
+  }
+
   return prisma.expense.update({
     where: {
       id: expenseId,
       userId
     },
-    data: {
-      amount: data.amount,
-      category: data.category,
-      description: data.description,
-      date: data.date ? new Date(data.date) : undefined,
-      isFixed: data.isFixed,
-      dueDay: data.dueDay,
-      competenceMonth: data.competenceMonth
-    }
+    data: prismaData
   });
 }
 

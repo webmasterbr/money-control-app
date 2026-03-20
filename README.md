@@ -31,6 +31,7 @@ Arquivo: `prisma/schema.prisma`
 - `id` (UUID, PK)
 - `email` (único)
 - `password` (hash via bcrypt)
+- `firstName`, `lastName` (opcionais; preenchidos no cadastro)
 - `createdAt`
 
 Relacionamentos:
@@ -87,14 +88,15 @@ Arquivos principais:
 - `lib/validation.ts` – schemas de validação Zod para login/registro
 - `app/api/auth/register/route.ts` – cria usuário, valida dados, faz hash da senha, seta cookie de sessão
 - `app/api/auth/login/route.ts` – autentica credenciais, gera JWT e seta cookie
-- `app/api/auth/logout/route.ts` – limpa cookie de sessão
+- `app/api/auth/logout/route.ts` – limpa cookie de sessão (`POST`)
+- `components/LogoutButton.tsx` – ação **Sair** no header (apenas com sessão); chama logout e redireciona para `/login`
 - `app/api/auth/me/route.ts` – retorna dados do usuário autenticado
 - `middleware.ts` – protege rotas `/dashboard`, `/incomes`, `/expenses` redirecionando para `/login` caso não haja sessão
 
 Fluxo resumido:
 
 1. Usuário acessa `/register` ou `/login`.
-2. `AuthForm` (client component) envia `POST` para `/api/auth/register` ou `/api/auth/login`.
+2. `AuthForm` (client component) envia `POST` para `/api/auth/register` (nome, sobrenome, e-mail, senha) ou `/api/auth/login`.
 3. API valida dados (Zod), acessa Prisma, e em caso de sucesso:
    - Gera um JWT com `userId` e `email`.
    - Grava o token em um cookie HttpOnly.
@@ -152,12 +154,13 @@ UI:
 - Página: `app/expenses/page.tsx` (Server Component)
   - Garante autenticação e renderiza `ExpensesPageClient`.
 - Componente: `components/ExpensesPageClient.tsx` (Client Component)
-  - Formulário focado em **registro rápido**:
+  - Formulário focado em **registro rápido** (campos reutilizados em modal de edição):
     - `amount`, `category`, `description`, `date`, `competenceMonth`.
     - `isFixed` (checkbox) e `dueDay` (dia vencimento, opcional).
+  - Campos compartilhados: `components/ExpenseFormFields.tsx`.
   - Tabela com:
     - Data, categoria, descrição, tipo (fixa/variável), vencimento, mês de competência, valor.
-  - Ação de exclusão de despesa.
+  - Ações **Editar** (modal com formulário preenchido + salvar) e **Excluir**.
 
 ### 4. Dashboard
 
@@ -171,6 +174,7 @@ Camada de serviço:
     - `fixedExpensesTotal` – soma de despesas fixas no mês.
     - `upcomingFixedExpenses` – despesas fixas com vencimento nos próximos 7 dias.
     - `expensesByCategory` – totais de despesas agrupadas por categoria (para gráfico).
+    - `incomesByCategory` – totais de receitas agrupadas por categoria (para gráfico).
 
 Página:
 
@@ -180,12 +184,14 @@ Página:
   - Renderiza:
     - Cards com **Receitas no mês**, **Despesas no mês**, **Saldo restante**.
     - Card de **Despesas fixas** com lista das próximas a vencer.
-    - Gráfico de pizza de despesas por categoria.
+    - Gráficos de pizza: despesas e receitas por categoria.
 
-Gráfico:
+Gráficos:
 
 - `components/ExpensesPieChart.tsx` (Client Component, Recharts)
   - Recebe `expensesByCategory` e desenha gráfico de pizza responsivo.
+- `components/IncomesPieChart.tsx` (Client Component, Recharts)
+  - Recebe `incomesByCategory` e desenha gráfico de pizza responsivo.
 
 ---
 

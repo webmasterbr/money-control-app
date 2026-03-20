@@ -2,7 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import ptBR from "date-fns/locale/pt-BR";
+import { ptBR } from "date-fns/locale/pt-BR";
+
+function formatCurrencyInput(rawValue: string) {
+  const digitsOnly = rawValue.replace(/\D/g, "");
+  if (!digitsOnly) return "";
+
+  const numericValue = Number(digitsOnly) / 100;
+  return numericValue.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL"
+  });
+}
+
+function parseCurrencyInput(maskedValue: string) {
+  const digitsOnly = maskedValue.replace(/\D/g, "");
+  if (!digitsOnly) return 0;
+  return Number(digitsOnly) / 100;
+}
 
 type Income = {
   id: string;
@@ -11,6 +28,22 @@ type Income = {
   description: string | null;
   date: string;
 };
+
+const incomeCategories = [
+  { value: "SALARY", label: "Salário" },
+  { value: "FREELANCE", label: "Freelance" },
+  { value: "BUSINESS", label: "Negócio" },
+  { value: "INVESTMENTS", label: "Investimentos" },
+  { value: "OTHER", label: "Outros" }
+];
+
+const incomeCategoryLabelByValue = incomeCategories.reduce<Record<string, string>>(
+  (acc, item) => {
+    acc[item.value] = item.label;
+    return acc;
+  },
+  {}
+);
 
 export function IncomesPageClient() {
   const [items, setItems] = useState<Income[]>([]);
@@ -56,11 +89,20 @@ export function IncomesPageClient() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    const parsedAmount = parseCurrencyInput(form.amount);
+    if (!parsedAmount) {
+      setError("Informe um valor válido.");
+      return;
+    }
+
     try {
       const res = await fetch("/api/incomes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form)
+        body: JSON.stringify({
+          ...form,
+          amount: parsedAmount
+        })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -68,7 +110,12 @@ export function IncomesPageClient() {
         return;
       }
       await loadData();
-      setForm((prev) => ({ ...prev, amount: "", description: "" }));
+      setForm((prev) => ({
+        ...prev,
+        amount: "",
+        description: "",
+        category: ""
+      }));
     } catch (err) {
       console.error(err);
       setError("Erro inesperado ao criar receita.");
@@ -111,13 +158,16 @@ export function IncomesPageClient() {
             </label>
             <input
               id="amount"
-              type="number"
-              step="0.01"
-              min="0"
+              type="text"
+              inputMode="decimal"
               className="input mt-1"
+              placeholder="R$ 0,00"
               value={form.amount}
               onChange={(e) =>
-                setForm((f) => ({ ...f, amount: e.target.value }))
+                setForm((f) => ({
+                  ...f,
+                  amount: formatCurrencyInput(e.target.value)
+                }))
               }
               required
             />
@@ -127,17 +177,24 @@ export function IncomesPageClient() {
             <label className="label" htmlFor="category">
               Categoria
             </label>
-            <input
+            <select
               id="category"
-              type="text"
               className="input mt-1"
-              placeholder="Salário, Freelance..."
               value={form.category}
               onChange={(e) =>
                 setForm((f) => ({ ...f, category: e.target.value }))
               }
               required
-            />
+            >
+              <option value="" disabled>
+                Selecione uma categoria
+              </option>
+              {incomeCategories.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -217,7 +274,10 @@ export function IncomesPageClient() {
                         locale: ptBR
                       })}
                     </td>
-                    <td className="py-2 pr-3">{item.category}</td>
+                    <td className="py-2 pr-3">
+                      {incomeCategoryLabelByValue[item.category] ??
+                        item.category}
+                    </td>
                     <td className="py-2 pr-3 text-slate-300">
                       {item.description || "-"}
                     </td>

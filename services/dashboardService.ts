@@ -18,6 +18,10 @@ export type DashboardSummary = {
     category: string;
     total: number;
   }[];
+  incomesByCategory: {
+    category: string;
+    total: number;
+  }[];
 };
 
 export async function getDashboardSummary(
@@ -27,8 +31,13 @@ export async function getDashboardSummary(
   const monthStart = startOfMonth(referenceDate);
   const monthEnd = endOfMonth(referenceDate);
 
-  const [incomesAgg, expensesAgg, fixedExpenses, expensesGrouped] =
-    await Promise.all([
+  const [
+    incomesAgg,
+    expensesAgg,
+    fixedExpenses,
+    expensesGrouped,
+    incomesGrouped
+  ] = await Promise.all([
       prisma.income.aggregate({
         _sum: { amount: true },
         where: {
@@ -74,6 +83,19 @@ export async function getDashboardSummary(
             lte: monthEnd
           }
         }
+      }),
+      prisma.income.groupBy({
+        by: ["category"],
+        _sum: {
+          amount: true
+        },
+        where: {
+          userId,
+          date: {
+            gte: monthStart,
+            lte: monthEnd
+          }
+        }
       })
     ]);
 
@@ -97,6 +119,11 @@ export async function getDashboardSummary(
     total: Number(g._sum.amount ?? 0)
   }));
 
+  const incomesByCategory = incomesGrouped.map((g) => ({
+    category: g.category,
+    total: Number(g._sum.amount ?? 0)
+  }));
+
   return {
     incomesTotal,
     expensesTotal,
@@ -110,7 +137,8 @@ export async function getDashboardSummary(
       dueDay: exp.dueDay,
       competenceMonth: exp.competenceMonth
     })),
-    expensesByCategory
+    expensesByCategory,
+    incomesByCategory
   };
 }
 

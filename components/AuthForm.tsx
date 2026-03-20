@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -12,12 +13,18 @@ type Props = {
 export function AuthForm({ mode }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isLogin = mode === "login";
+  const from = searchParams.get("from");
+  const authToggleHref = isLogin
+    ? `/register${from ? `?from=${encodeURIComponent(from)}` : ""}`
+    : `/login${from ? `?from=${encodeURIComponent(from)}` : ""}`;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,7 +37,11 @@ export function AuthForm({ mode }: Props) {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify(
+          isLogin
+            ? { email, password }
+            : { firstName, lastName, email, password }
+        )
       });
 
       const data = await res.json();
@@ -40,8 +51,7 @@ export function AuthForm({ mode }: Props) {
         return;
       }
 
-      const from = searchParams.get("from") || "/dashboard";
-      router.push(from);
+      router.push(from || "/dashboard");
       router.refresh();
     } catch (err) {
       console.error(err);
@@ -64,6 +74,43 @@ export function AuthForm({ mode }: Props) {
         </p>
 
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+          {!isLogin && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3">
+              <div>
+                <label className="label" htmlFor="firstName">
+                  Nome
+                </label>
+                <input
+                  id="firstName"
+                  type="text"
+                  autoComplete="given-name"
+                  className="input mt-1"
+                  placeholder="Maria"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                  maxLength={80}
+                />
+              </div>
+              <div>
+                <label className="label" htmlFor="lastName">
+                  Sobrenome
+                </label>
+                <input
+                  id="lastName"
+                  type="text"
+                  autoComplete="family-name"
+                  className="input mt-1"
+                  placeholder="Silva"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                  maxLength={80}
+                />
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="label" htmlFor="email">
               E-mail
@@ -71,6 +118,7 @@ export function AuthForm({ mode }: Props) {
             <input
               id="email"
               type="email"
+              autoComplete="email"
               className="input mt-1"
               placeholder="voce@exemplo.com"
               value={email}
@@ -86,6 +134,7 @@ export function AuthForm({ mode }: Props) {
             <input
               id="password"
               type="password"
+              autoComplete={isLogin ? "current-password" : "new-password"}
               className="input mt-1"
               placeholder="••••••••"
               value={password}
@@ -108,6 +157,22 @@ export function AuthForm({ mode }: Props) {
               ? "Entrar"
               : "Criar conta"}
           </button>
+
+          <p className="text-center text-sm text-slate-400">
+            {isLogin ? "Ainda não tem cadastro?" : "Já possui cadastro?"}{" "}
+            <Link
+              href={authToggleHref}
+              className="font-medium"
+              aria-disabled={loading}
+              onClick={(e) => {
+                if (loading) {
+                  e.preventDefault();
+                }
+              }}
+            >
+              {isLogin ? "Criar conta" : "Entrar"}
+            </Link>
+          </p>
         </form>
       </div>
     </div>

@@ -1,8 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { format } from "date-fns";
-import ptBR from "date-fns/locale/pt-BR";
+import { ptBR } from "date-fns/locale/pt-BR";
+import {
+  ExpenseFormFields,
+  categoryLabelByValue,
+  expenseRecordToFormValues,
+  parseCurrencyInput,
+  type ExpenseFormValues
+} from "@/components/ExpenseFormFields";
 
 type Expense = {
   id: string;
@@ -15,17 +22,12 @@ type Expense = {
   competenceMonth: string;
 };
 
-export function ExpensesPageClient() {
-  const [items, setItems] = useState<Expense[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
+function emptyFormDefaults(): ExpenseFormValues {
   const today = new Date();
   const monthStr = `${today.getFullYear()}-${String(
     today.getMonth() + 1
   ).padStart(2, "0")}`;
-
-  const [form, setForm] = useState({
+  return {
     amount: "",
     category: "",
     description: "",
@@ -33,7 +35,48 @@ export function ExpensesPageClient() {
     isFixed: false,
     dueDay: "",
     competenceMonth: monthStr
-  });
+  };
+}
+
+function buildExpensePayload(form: ExpenseFormValues) {
+  const parsedAmount = parseCurrencyInput(form.amount);
+  return {
+    parsedAmount,
+    payload: {
+      amount: parsedAmount,
+      category: form.category,
+      description: form.description.trim() || undefined,
+      date: form.date,
+      isFixed: form.isFixed,
+      competenceMonth: form.competenceMonth,
+      dueDay: form.isFixed && form.dueDay ? Number(form.dueDay) : null
+    }
+  };
+}
+
+export function ExpensesPageClient() {
+  const [items, setItems] = useState<Expense[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [form, setForm] = useState<ExpenseFormValues>(() =>
+    emptyFormDefaults()
+  );
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<ExpenseFormValues>(() =>
+    emptyFormDefaults()
+  );
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+
+  const titleId = "edit-expense-dialog-title";
+
+  const closeEdit = useCallback(() => {
+    setEditingId(null);
+    setEditError(null);
+    setEditSaving(false);
+  }, []);
 
   async function loadData() {
     setLoading(true);
@@ -46,7 +89,7 @@ export function ExpensesPageClient() {
         return;
       }
       setItems(
-        data.expenses.map((e: any) => ({
+        data.expenses.map((e: Expense & { amount: unknown }) => ({
           ...e,
           amount: e.amount.toString(),
           date: e.date
@@ -64,14 +107,42 @@ export function ExpensesPageClient() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (!editingId) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeEdit();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [editingId, closeEdit]);
+
+  useEffect(() => {
+    if (!editingId) return;
+    requestAnimationFrame(() => {
+      document.getElementById("edit-amount")?.focus();
+    });
+  }, [editingId]);
+
+  function openEdit(item: Expense) {
+    setEditForm(expenseRecordToFormValues(item));
+    setEditError(null);
+    setEditingId(item.id);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
-    const payload = {
-      ...form,
-      dueDay: form.dueDay ? Number(form.dueDay) : undefined
-    };
+    const { parsedAmount, payload } = buildExpensePayload(form);
+    if (!parsedAmount) {
+      setError("Informe um valor válido.");
+      return;
+    }
 
     try {
       const res = await fetch("/api/expenses", {
@@ -94,6 +165,39 @@ export function ExpensesPageClient() {
     } catch (err) {
       console.error(err);
       setError("Erro inesperado ao criar despesa.");
+    }
+  }
+
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingId) return;
+    setEditError(null);
+
+    const { parsedAmount, payload } = buildExpensePayload(editForm);
+    if (!parsedAmount) {
+      setEditError("Informe um valor válido.");
+      return;
+    }
+
+    setEditSaving(true);
+    try {
+      const res = await fetch(`/api/expenses/${editingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setEditError(data.error ?? "Erro ao atualizar despesa.");
+        return;
+      }
+      await loadData();
+      closeEdit();
+    } catch (err) {
+      console.error(err);
+      setEditError("Erro inesperado ao atualizar despesa.");
+    } finally {
+      setEditSaving(false);
     }
   }
 
@@ -124,126 +228,14 @@ export function ExpensesPageClient() {
         </p>
 
         <form
-          className="mt-4 grid gap-3 md:grid-cols-6 md:items-end"
+          className="mt-4 grid gap-3 md:grid-cols-12 md:items-end"
           onSubmit={handleSubmit}
         >
-          <div>
-            <label className="label" htmlFor="amount">
-              Valor (R$)
-            </label>
-            <input
-              id="amount"
-              type="number"
-              step="0.01"
-              min="0"
-              className="input mt-1"
-              value={form.amount}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, amount: e.target.value }))
-              }
-              required
-            />
-          </div>
-
-          <div>
-            <label className="label" htmlFor="category">
-              Categoria
-            </label>
-            <input
-              id="category"
-              type="text"
-              className="input mt-1"
-              placeholder="Aluguel, Mercado..."
-              value={form.category}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, category: e.target.value }))
-              }
-              required
-            />
-          </div>
-
-          <div>
-            <label className="label" htmlFor="date">
-              Data
-            </label>
-            <input
-              id="date"
-              type="date"
-              className="input mt-1"
-              value={form.date}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, date: e.target.value }))
-              }
-              required
-            />
-          </div>
-
-          <div>
-            <label className="label" htmlFor="competenceMonth">
-              Mês competência
-            </label>
-            <input
-              id="competenceMonth"
-              type="month"
-              className="input mt-1"
-              value={form.competenceMonth}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, competenceMonth: e.target.value }))
-              }
-              required
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="label" htmlFor="description">
-              Descrição
-            </label>
-            <input
-              id="description"
-              type="text"
-              className="input mt-1"
-              placeholder="Opcional"
-              value={form.description}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, description: e.target.value }))
-              }
-            />
-          </div>
-
-          <div className="md:col-span-2 flex items-center gap-3 pt-2">
-            <label className="flex items-center gap-2 text-sm text-slate-200">
-              <input
-                type="checkbox"
-                checked={form.isFixed}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, isFixed: e.target.checked }))
-                }
-              />
-              Despesa fixa
-            </label>
-
-            <div className="flex-1">
-              <label className="label" htmlFor="dueDay">
-                Dia vencimento
-              </label>
-              <input
-                id="dueDay"
-                type="number"
-                min="1"
-                max="31"
-                className="input mt-1"
-                value={form.dueDay}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, dueDay: e.target.value }))
-                }
-                disabled={!form.isFixed}
-              />
-            </div>
-          </div>
+          <ExpenseFormFields idPrefix="create" form={form} setForm={setForm} />
 
           <button
             type="submit"
-            className="btn-primary md:col-span-6 md:w-auto"
+            className="btn-primary md:col-span-12 md:w-auto"
           >
             Adicionar despesa
           </button>
@@ -275,7 +267,7 @@ export function ExpensesPageClient() {
                   <th className="py-2 text-left">Vencimento</th>
                   <th className="py-2 text-left">Competência</th>
                   <th className="py-2 text-right">Valor</th>
-                  <th className="py-2 text-right"></th>
+                  <th className="py-2 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -289,7 +281,9 @@ export function ExpensesPageClient() {
                         locale: ptBR
                       })}
                     </td>
-                    <td className="py-2 pr-3">{item.category}</td>
+                    <td className="py-2 pr-3">
+                      {categoryLabelByValue[item.category] ?? item.category}
+                    </td>
                     <td className="py-2 pr-3 text-slate-300">
                       {item.description || "-"}
                     </td>
@@ -309,13 +303,22 @@ export function ExpensesPageClient() {
                       })}
                     </td>
                     <td className="py-2 pl-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(item.id)}
-                        className="text-xs text-rose-400 hover:text-rose-300"
-                      >
-                        Excluir
-                      </button>
+                      <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
+                        <button
+                          type="button"
+                          onClick={() => openEdit(item)}
+                          className="text-xs font-medium text-primary-400 hover:text-primary-300"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(item.id)}
+                          className="text-xs text-rose-400 hover:text-rose-300"
+                        >
+                          Excluir
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -324,7 +327,88 @@ export function ExpensesPageClient() {
           </div>
         )}
       </section>
+
+      {editingId && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/90 p-4 backdrop-blur-sm sm:items-center"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) closeEdit();
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            className="max-h-[min(90vh,720px)] w-full max-w-lg overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl ring-1 ring-slate-800/80"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <h2
+                id={titleId}
+                className="text-base font-semibold text-slate-100"
+              >
+                Editar despesa
+              </h2>
+              <button
+                type="button"
+                className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+                aria-label="Fechar"
+                onClick={closeEdit}
+              >
+                <span className="sr-only">Fechar</span>
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <form
+              className="grid gap-3 md:grid-cols-12 md:items-end"
+              onSubmit={handleEditSubmit}
+            >
+              <ExpenseFormFields
+                idPrefix="edit"
+                form={editForm}
+                setForm={setEditForm}
+              />
+
+              {editError && (
+                <p className="error-text md:col-span-12">{editError}</p>
+              )}
+
+              <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end md:col-span-12">
+                <button
+                  type="button"
+                  className="btn-outline w-full sm:w-auto"
+                  onClick={closeEdit}
+                  disabled={editSaving}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary w-full sm:w-auto"
+                  disabled={editSaving}
+                >
+                  {editSaving ? "Salvando..." : "Salvar alterações"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

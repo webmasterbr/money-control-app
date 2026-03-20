@@ -1,6 +1,16 @@
 import { z } from "zod";
 
 export const registerSchema = z.object({
+  firstName: z
+    .string()
+    .trim()
+    .min(1, "Nome é obrigatório")
+    .max(80, "Nome muito longo"),
+  lastName: z
+    .string()
+    .trim()
+    .min(1, "Sobrenome é obrigatório")
+    .max(80, "Sobrenome muito longo"),
   email: z.string().email("E-mail inválido"),
   password: z
     .string()

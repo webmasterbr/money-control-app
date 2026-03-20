@@ -43,7 +43,15 @@ export function verifyUserJwt(token: string): JwtUserPayload | null {
   }
 }
 
-export async function getCurrentUser() {
+export type CurrentUser = {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  createdAt: Date;
+};
+
+export async function getCurrentUser(): Promise<CurrentUser | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
@@ -62,11 +70,13 @@ export async function getCurrentUser() {
     select: {
       id: true,
       email: true,
+      firstName: true,
+      lastName: true,
       createdAt: true
     }
   });
 
-  return user;
+  return user as CurrentUser | null;
 }
 
 export function attachAuthCookieToResponse(

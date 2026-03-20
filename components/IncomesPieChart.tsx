@@ -13,29 +13,27 @@ const COLORS = [
 ];
 
 const CATEGORY_LABEL_BY_VALUE: Record<string, string> = {
-  FOOD: "Alimentação",
-  HOUSING: "Moradia",
-  TRANSPORT: "Transporte",
-  HEALTH: "Saúde",
-  EDUCATION: "Educação",
-  LEISURE: "Lazer",
+  SALARY: "Salário",
+  FREELANCE: "Freelance",
+  BUSINESS: "Negócio",
+  INVESTMENTS: "Investimentos",
   OTHER: "Outros"
 };
 
-export type ExpensesPieDatum = {
+export type IncomesPieDatum = {
   category: string;
   total: number;
 };
 
 type Props = {
-  data: ExpensesPieDatum[];
+  data: IncomesPieDatum[];
 };
 
-export function ExpensesPieChart({ data }: Props) {
+export function IncomesPieChart({ data }: Props) {
   if (!data.length) {
     return (
       <div className="card flex h-64 items-center justify-center text-sm text-slate-400">
-        Nenhuma despesa registrada neste mês.
+        Nenhuma receita registrada neste mês.
       </div>
     );
   }
@@ -48,7 +46,7 @@ export function ExpensesPieChart({ data }: Props) {
   return (
     <div className="card h-64 p-4">
       <h2 className="mb-2 text-sm font-semibold text-slate-200">
-        Despesas por categoria
+        Receitas por categoria
       </h2>
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
@@ -80,4 +78,3 @@ export function ExpensesPieChart({ data }: Props) {
     </div>
   );
 }
-
