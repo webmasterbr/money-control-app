@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
+import { format, parse } from "date-fns";
+import { ptBR } from "date-fns/locale/pt-BR";
 import { getCurrentUser, type CurrentUser } from "@/lib/auth";
+import { resolveDashboardMonth } from "@/lib/dashboardMonth";
 import { getDashboardSummary } from "@/services/dashboardService";
+import { DashboardMonthSelector } from "@/components/DashboardMonthSelector";
 import { ExpensesPieChart } from "@/components/ExpensesPieChart";
 import { IncomesPieChart } from "@/components/IncomesPieChart";
 
@@ -75,26 +79,60 @@ function getFinancialHealth(
   };
 }
 
-export default async function DashboardPage() {
+function capitalizePt(text: string) {
+  if (!text) return text;
+  return text.charAt(0).toLocaleUpperCase("pt-BR") + text.slice(1);
+}
+
+type DashboardPageProps = {
+  searchParams: Promise<{ month?: string }>;
+};
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const user = await getCurrentUser();
 
   if (!user) {
     redirect("/login");
   }
 
-  const summary = await getDashboardSummary(user.id);
+  const sp = await searchParams;
+  const now = new Date();
+  const { yearMonth, referenceDate, isCurrentCalendarMonth } =
+    resolveDashboardMonth(sp.month, now);
+
+  const summary = await getDashboardSummary(user.id, referenceDate, {
+    fixedListMode: isCurrentCalendarMonth ? "next7Days" : "fullMonth"
+  });
   const health = getFinancialHealth(summary.incomesTotal, summary.expensesTotal);
+
+  const monthAnchor = parse(`${yearMonth}-01`, "yyyy-MM-dd", new Date());
+  const monthLabel = capitalizePt(
+    format(monthAnchor, "MMMM 'de' yyyy", { locale: ptBR })
+  );
+
+  const fixedSubsectionTitle = isCurrentCalendarMonth
+    ? "Próximas a vencer (7 dias)"
+    : "Vencimentos deste mês";
+
+  const fixedListEmptyMessage = isCurrentCalendarMonth
+    ? "Nenhuma despesa fixa próxima do vencimento."
+    : "Nenhuma despesa fixa neste mês.";
 
   return (
     <div className="space-y-6">
-      <section>
-        <h1 className="text-xl font-semibold tracking-tight">
-          Olá,{" "}
-          <span className="text-primary-400">{userDisplayName(user)}</span>
-        </h1>
-        <p className="mt-1 text-sm text-slate-400">
-          Visão geral das suas finanças neste mês.
-        </p>
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">
+            Olá,{" "}
+            <span className="text-primary-400">{userDisplayName(user)}</span>
+          </h1>
+          <p className="mt-1 text-sm text-slate-400">
+            {isCurrentCalendarMonth
+              ? "Visão geral das suas finanças neste mês."
+              : `Visão geral de ${monthLabel}.`}
+          </p>
+        </div>
+        <DashboardMonthSelector value={yearMonth} />
       </section>
 
       <section className="space-y-4">
@@ -166,12 +204,10 @@ export default async function DashboardPage() {
           </p>
 
           <h3 className="mt-4 text-xs font-medium uppercase text-slate-400">
-            Próximas a vencer (7 dias)
+            {fixedSubsectionTitle}
           </h3>
           {summary.upcomingFixedExpenses.length === 0 ? (
-            <p className="mt-2 text-sm text-slate-500">
-              Nenhuma despesa fixa próxima do vencimento.
-            </p>
+            <p className="mt-2 text-sm text-slate-500">{fixedListEmptyMessage}</p>
           ) : (
             <ul className="mt-2 space-y-1 text-sm">
               {summary.upcomingFixedExpenses.map((exp) => (
@@ -184,7 +220,9 @@ export default async function DashboardPage() {
                       {exp.description || exp.category}
                     </p>
                     <p className="text-xs text-slate-400">
-                      Vencimento dia {exp.dueDay} ({exp.competenceMonth})
+                      {exp.dueDay != null
+                        ? `Vencimento dia ${exp.dueDay} (${exp.competenceMonth})`
+                        : `Sem dia de vencimento (${exp.competenceMonth})`}
                     </p>
                   </div>
                   <span className="text-sm font-semibold text-rose-300">

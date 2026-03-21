@@ -24,7 +24,6 @@ export type ExpenseFormValues = {
   date: string;
   isFixed: boolean;
   dueDay: string;
-  competenceMonth: string;
 };
 
 export function formatCurrencyInput(rawValue: string) {
@@ -57,7 +56,6 @@ export function expenseRecordToFormValues(expense: {
   date: string;
   isFixed: boolean;
   dueDay: number | null;
-  competenceMonth: string;
 }): ExpenseFormValues {
   const d = new Date(expense.date);
   const yyyy = d.getFullYear();
@@ -69,8 +67,7 @@ export function expenseRecordToFormValues(expense: {
     description: expense.description ?? "",
     date: `${yyyy}-${mm}-${dd}`,
     isFixed: expense.isFixed,
-    dueDay: expense.dueDay != null ? String(expense.dueDay) : "",
-    competenceMonth: expense.competenceMonth
+    dueDay: expense.dueDay != null ? String(expense.dueDay) : ""
   };
 }
 
@@ -134,7 +131,7 @@ export function ExpenseFormFields({ idPrefix, form, setForm }: Props) {
         </select>
       </div>
 
-      <div className="md:col-span-2">
+      <div className="md:col-span-6">
         <label className="label" htmlFor={pid("date")}>
           Data
         </label>
@@ -145,22 +142,6 @@ export function ExpenseFormFields({ idPrefix, form, setForm }: Props) {
           value={form.date}
           onChange={(e) =>
             setForm((f) => ({ ...f, date: e.target.value }))
-          }
-          required
-        />
-      </div>
-
-      <div className="md:col-span-4">
-        <label className="label" htmlFor={pid("competenceMonth")}>
-          Mês competência
-        </label>
-        <input
-          id={pid("competenceMonth")}
-          type="month"
-          className="input mt-1"
-          value={form.competenceMonth}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, competenceMonth: e.target.value }))
           }
           required
         />

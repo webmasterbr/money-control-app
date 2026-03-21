@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function LogoutButton() {
+type LogoutButtonProps = {
+  className?: string;
+};
+
+export function LogoutButton({ className }: LogoutButtonProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -31,7 +35,10 @@ export function LogoutButton() {
       disabled={loading}
       aria-busy={loading}
       aria-label="Encerrar sessão"
-      className="text-sm text-slate-400 transition-colors hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+      className={
+        className ??
+        "text-sm text-slate-400 transition-colors hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+      }
     >
       {loading ? "Saindo…" : "Sair"}
     </button>

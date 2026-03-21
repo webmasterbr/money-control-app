@@ -24,10 +24,15 @@ export type DashboardSummary = {
   }[];
 };
 
+export type FixedExpensesListMode = "next7Days" | "fullMonth";
+
 export async function getDashboardSummary(
   userId: string,
-  referenceDate = new Date()
+  referenceDate = new Date(),
+  options?: { fixedListMode?: FixedExpensesListMode }
 ): Promise<DashboardSummary> {
+  const fixedListMode: FixedExpensesListMode =
+    options?.fixedListMode ?? "next7Days";
   const monthStart = startOfMonth(referenceDate);
   const monthEnd = endOfMonth(referenceDate);
 
@@ -109,10 +114,18 @@ export async function getDashboardSummary(
   );
 
   const today = referenceDate.getDate();
-  const upcomingFixedExpenses = fixedExpenses.filter((exp) => {
-    if (exp.dueDay == null) return false;
-    return exp.dueDay >= today && exp.dueDay <= today + 7;
-  });
+  const upcomingFixedExpenses =
+    fixedListMode === "fullMonth"
+      ? [...fixedExpenses].sort((a, b) => {
+          if (a.dueDay == null && b.dueDay == null) return 0;
+          if (a.dueDay == null) return 1;
+          if (b.dueDay == null) return -1;
+          return a.dueDay - b.dueDay;
+        })
+      : fixedExpenses.filter((exp) => {
+          if (exp.dueDay == null) return false;
+          return exp.dueDay >= today && exp.dueDay <= today + 7;
+        });
 
   const expensesByCategory = expensesGrouped.map((g) => ({
     category: g.category,

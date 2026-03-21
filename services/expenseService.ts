@@ -1,3 +1,4 @@
+import { competenceMonthFromDateInput } from "@/lib/expenseCompetence";
 import { prisma } from "@/lib/prisma";
 import type { ExpenseInput } from "@/lib/validation";
 
@@ -9,6 +10,7 @@ export async function listExpenses(userId: string) {
 }
 
 export async function createExpense(userId: string, data: ExpenseInput) {
+  const competenceMonth = competenceMonthFromDateInput(data.date);
   return prisma.expense.create({
     data: {
       userId,
@@ -18,7 +20,7 @@ export async function createExpense(userId: string, data: ExpenseInput) {
       date: new Date(data.date),
       isFixed: data.isFixed,
       dueDay: data.dueDay,
-      competenceMonth: data.competenceMonth
+      competenceMonth
     }
   });
 }
@@ -39,11 +41,11 @@ export async function updateExpense(
   if (data.description !== undefined) {
     prismaData.description = data.description || null;
   }
-  if (data.date !== undefined) prismaData.date = new Date(data.date);
-  if (data.isFixed !== undefined) prismaData.isFixed = data.isFixed;
-  if (data.competenceMonth !== undefined) {
-    prismaData.competenceMonth = data.competenceMonth;
+  if (data.date !== undefined) {
+    prismaData.date = new Date(data.date);
+    prismaData.competenceMonth = competenceMonthFromDateInput(data.date);
   }
+  if (data.isFixed !== undefined) prismaData.isFixed = data.isFixed;
 
   if (data.isFixed === false) {
     prismaData.dueDay = null;

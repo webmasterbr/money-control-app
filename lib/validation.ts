@@ -36,10 +36,7 @@ export const expenseSchema = z.object({
   description: z.string().optional(),
   date: z.string().or(z.date()),
   isFixed: z.boolean().default(false),
-  dueDay: z.number().int().min(1).max(31).optional(),
-  competenceMonth: z
-    .string()
-    .regex(/^\d{4}-\d{2}$/, "Formato de mês de competência inválido (YYYY-MM)")
+  dueDay: z.number().int().min(1).max(31).optional()
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;

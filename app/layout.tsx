@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
-import { LogoutButton } from "@/components/LogoutButton";
+import { BottomNav } from "@/components/BottomNav";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,36 +19,34 @@ export default async function RootLayout({
   return (
     <html lang="pt-BR">
       <body className="min-h-screen bg-slate-950 text-slate-50">
-        <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-4 py-6">
+        <div
+          className={`mx-auto flex min-h-screen max-w-5xl flex-col px-4 py-6 ${
+            user ? "pb-24" : ""
+          }`}
+        >
           <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <Link href="/dashboard" className="text-lg font-semibold tracking-tight">
+            <Link href={user ? "/dashboard" : "/"} className="text-lg font-semibold tracking-tight">
               Saldo <span className="text-primary-400">Certo</span>
             </Link>
-            <nav className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-slate-300">
-              <Link href="/dashboard" className="hover:text-primary-300">
-                Dashboard
-              </Link>
-              <Link href="/incomes" className="hover:text-primary-300">
-                Receitas
-              </Link>
-              <Link href="/expenses" className="hover:text-primary-300">
-                Despesas
-              </Link>
-              {user ? (
-                <>
-                  <span
-                    className="hidden h-4 w-px bg-slate-700 sm:block"
-                    aria-hidden
-                  />
-                  <LogoutButton />
-                </>
-              ) : null}
-            </nav>
+            {!user ? (
+              <nav className="flex items-center gap-3 text-sm text-slate-300">
+                <Link href="/login" className="hover:text-primary-300">
+                  Entrar
+                </Link>
+                <Link
+                  href="/register"
+                  className="rounded-lg border border-slate-700 px-3 py-1.5 hover:border-primary-500 hover:text-primary-300"
+                >
+                  Criar conta
+                </Link>
+              </nav>
+            ) : null}
           </header>
           <main className="flex-1">{children}</main>
           <footer className="mt-6 text-xs text-slate-500">
             &copy; {new Date().getFullYear()} Saldo Certo
           </footer>
+          {user ? <BottomNav /> : null}
         </div>
       </body>
     </html>

@@ -3,13 +3,12 @@ import { getCurrentUser } from "@/lib/auth";
 import { incomeSchema } from "@/lib/validation";
 import { deleteIncome, updateIncome } from "@/services/incomeService";
 
-type RouteParams = {
-  params: {
-    id: string;
-  };
+type RouteContext = {
+  params: Promise<{ id: string }>;
 };
 
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(request: NextRequest, context: RouteContext) {
+  const { id } = await context.params;
   const user = await getCurrentUser();
 
   if (!user) {
@@ -33,7 +32,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const income = await updateIncome(user.id, params.id, parsed.data);
+    const income = await updateIncome(user.id, id, parsed.data);
     return NextResponse.json({ income });
   } catch (error) {
     console.error("[INCOMES_PUT]", error);
@@ -44,7 +43,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+export async function DELETE(_request: NextRequest, context: RouteContext) {
+  const { id } = await context.params;
   const user = await getCurrentUser();
 
   if (!user) {
@@ -52,7 +52,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   }
 
   try {
-    await deleteIncome(user.id, params.id);
+    await deleteIncome(user.id, id);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[INCOMES_DELETE]", error);

@@ -63,7 +63,7 @@ Relacionamentos:
 - `date` (DateTime)
 - `isFixed` (boolean, default `false`)
 - `dueDay` (int opcional – dia de vencimento)
-- `competenceMonth` (string, formato `YYYY-MM`)
+- `competenceMonth` (string `YYYY-MM`, **derivado da `date`** ao criar/atualizar no serviço; não é enviado pelo cliente)
 - `createdAt`
 
 Índices:
@@ -89,9 +89,11 @@ Arquivos principais:
 - `app/api/auth/register/route.ts` – cria usuário, valida dados, faz hash da senha, seta cookie de sessão
 - `app/api/auth/login/route.ts` – autentica credenciais, gera JWT e seta cookie
 - `app/api/auth/logout/route.ts` – limpa cookie de sessão (`POST`)
-- `components/LogoutButton.tsx` – ação **Sair** no header (apenas com sessão); chama logout e redireciona para `/login`
+- `components/BottomNav.tsx` – navegação inferior (logado): Dashboard, Receitas, Despesas, **Config** (menu com **Perfil** e **Sair** via `LogoutButton`).
+- `components/LogoutButton.tsx` – encerra sessão (`POST /api/logout`); usado no menu Config.
+- `app/profile/page.tsx` – página **Perfil** (nome, e-mail, data de cadastro).
 - `app/api/auth/me/route.ts` – retorna dados do usuário autenticado
-- `middleware.ts` – protege rotas `/dashboard`, `/incomes`, `/expenses` redirecionando para `/login` caso não haja sessão
+- `middleware.ts` – protege rotas `/dashboard`, `/incomes`, `/expenses`, `/profile` redirecionando para `/login` caso não haja sessão
 
 Fluxo resumido:
 
@@ -155,7 +157,7 @@ UI:
   - Garante autenticação e renderiza `ExpensesPageClient`.
 - Componente: `components/ExpensesPageClient.tsx` (Client Component)
   - Formulário focado em **registro rápido** (campos reutilizados em modal de edição):
-    - `amount`, `category`, `description`, `date`, `competenceMonth`.
+    - `amount`, `category`, `description`, `date`; `competenceMonth` é calculada no backend a partir da data (`lib/expenseCompetence.ts`).
     - `isFixed` (checkbox) e `dueDay` (dia vencimento, opcional).
   - Campos compartilhados: `components/ExpenseFormFields.tsx`.
   - Tabela com:
@@ -167,23 +169,24 @@ UI:
 Camada de serviço:
 
 - `services/dashboardService.ts`
-  - `getDashboardSummary(userId, referenceDate?)` retorna:
-    - `incomesTotal` – soma de receitas no mês atual.
-    - `expensesTotal` – soma de despesas no mês atual.
-    - `balance` – diferença receitas − despesas.
-    - `fixedExpensesTotal` – soma de despesas fixas no mês.
-    - `upcomingFixedExpenses` – despesas fixas com vencimento nos próximos 7 dias.
-    - `expensesByCategory` – totais de despesas agrupadas por categoria (para gráfico).
-    - `incomesByCategory` – totais de receitas agrupadas por categoria (para gráfico).
+  - `getDashboardSummary(userId, referenceDate?, options?)` retorna agregados do **mês calendário** de `referenceDate` (`startOfMonth` / `endOfMonth`):
+    - `incomesTotal`, `expensesTotal`, `balance`, `fixedExpensesTotal`.
+    - `upcomingFixedExpenses` – sublista de despesas fixas do mês (ver `options.fixedListMode` abaixo).
+    - `expensesByCategory`, `incomesByCategory` – para os gráficos de pizza.
+  - `options.fixedListMode`:
+    - `next7Days` (padrão) – apenas fixas com `dueDay` na janela do dia atual até +7 dias (modo operacional).
+    - `fullMonth` – todas as fixas do mês, ordenadas por `dueDay` (nulos por último).
+
+- `lib/dashboardMonth.ts` – interpreta `?month=YYYY-MM` (query opcional; inválido ou ausente → mês corrente no fuso do servidor). Se o mês selecionado for o **mês calendário atual**, usa **hoje real** como `referenceDate`; caso contrário, usa o **dia 1** do mês selecionado (evita ambiguidade de UTC em `new Date('YYYY-MM')`).
 
 Página:
 
 - `app/dashboard/page.tsx` (Server Component)
-  - Usa `getCurrentUser()` para obter usuário.
-  - Usa `getDashboardSummary()` para buscar todos os agregados do mês.
+  - Lê `searchParams.month`, resolve mês com `resolveDashboardMonth`, chama `getDashboardSummary` com `fixedListMode` conforme mês atual ou não.
+  - `components/DashboardMonthSelector.tsx` – navegação por mês em pt-BR (setas anterior/próximo, rótulo “Março de 2026”, botão **Hoje**) + `router.replace` para `/dashboard?month=YYYY-MM` ou `/dashboard` (mês atual).
   - Renderiza:
-    - Cards com **Receitas no mês**, **Despesas no mês**, **Saldo restante**.
-    - Card de **Despesas fixas** com lista das próximas a vencer.
+    - Cards com **Receitas no mês**, **Despesas no mês**, **Saldo restante** e **Situação do mês** (indicador usa os totais do mês selecionado).
+    - **Despesas fixas**: total do mês; subtítulo **Próximas a vencer (7 dias)** no mês atual ou **Vencimentos deste mês** em outros meses.
     - Gráficos de pizza: despesas e receitas por categoria.
 
 Gráficos:
