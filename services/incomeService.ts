@@ -1,9 +1,24 @@
+import { endOfMonth, startOfMonth } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import type { IncomeInput } from "@/lib/validation";
 
-export async function listIncomes(userId: string) {
+export async function listIncomes(
+  userId: string,
+  filters: { yearMonth: string }
+) {
+  const [y, m] = filters.yearMonth.split("-").map(Number);
+  const anchor = new Date(y, m - 1, 1);
+  const monthStart = startOfMonth(anchor);
+  const monthEnd = endOfMonth(anchor);
+
   return prisma.income.findMany({
-    where: { userId },
+    where: {
+      userId,
+      date: {
+        gte: monthStart,
+        lte: monthEnd
+      }
+    },
     orderBy: { date: "desc" }
   });
 }

@@ -16,6 +16,7 @@ import {
   parseCurrencyInput,
   type ExpenseFormValues
 } from "@/components/ExpenseFormFields";
+import { EXPENSE_FIXED_DUE_DAY_MESSAGE } from "@/lib/validation";
 
 type Expense = {
   id: string;
@@ -40,6 +41,14 @@ function emptyFormDefaults(): ExpenseFormValues {
   };
 }
 
+function isValidFixedDueDay(form: ExpenseFormValues): boolean {
+  if (!form.isFixed) return true;
+  const day = String(form.dueDay).trim();
+  if (!day) return false;
+  const n = Number(day);
+  return Number.isInteger(n) && n >= 1 && n <= 31;
+}
+
 function buildExpensePayload(form: ExpenseFormValues) {
   const parsedAmount = parseCurrencyInput(form.amount);
   return {
@@ -50,7 +59,8 @@ function buildExpensePayload(form: ExpenseFormValues) {
       description: form.description.trim() || undefined,
       date: form.date,
       isFixed: form.isFixed,
-      dueDay: form.isFixed && form.dueDay ? Number(form.dueDay) : null
+      dueDay:
+        form.isFixed && form.dueDay ? Number(form.dueDay) : undefined
     }
   };
 }
@@ -63,7 +73,13 @@ function expenseMenuButtonRefKey(source: "card" | "table", id: string) {
   return `${source}:${id}`;
 }
 
-export function ExpensesPageClient() {
+type ExpensesPageClientProps = {
+  listCompetenceMonth: string;
+};
+
+export function ExpensesPageClient({
+  listCompetenceMonth
+}: ExpensesPageClientProps) {
   const [items, setItems] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -107,11 +123,13 @@ export function ExpensesPageClient() {
     setDeleteConfirmId(null);
   }, [deleteSaving]);
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/expenses");
+      const res = await fetch(
+        `/api/expenses?month=${encodeURIComponent(listCompetenceMonth)}`
+      );
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Erro ao carregar despesas.");
@@ -130,11 +148,11 @@ export function ExpensesPageClient() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [listCompetenceMonth]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   useEffect(() => {
     if (!editingId) return;
@@ -235,6 +253,11 @@ export function ExpensesPageClient() {
     e.preventDefault();
     setError(null);
 
+    if (!isValidFixedDueDay(form)) {
+      setError(EXPENSE_FIXED_DUE_DAY_MESSAGE);
+      return;
+    }
+
     const { parsedAmount, payload } = buildExpensePayload(form);
     if (!parsedAmount) {
       setError("Informe um valor válido.");
@@ -269,6 +292,11 @@ export function ExpensesPageClient() {
     e.preventDefault();
     if (!editingId) return;
     setEditError(null);
+
+    if (!isValidFixedDueDay(editForm)) {
+      setEditError(EXPENSE_FIXED_DUE_DAY_MESSAGE);
+      return;
+    }
 
     const { parsedAmount, payload } = buildExpensePayload(editForm);
     if (!parsedAmount) {

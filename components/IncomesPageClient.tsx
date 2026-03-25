@@ -74,7 +74,11 @@ function incomeRecordToEditForm(item: Income) {
   };
 }
 
-export function IncomesPageClient() {
+type IncomesPageClientProps = {
+  listYearMonth: string;
+};
+
+export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
   const [items, setItems] = useState<Income[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -125,11 +129,13 @@ export function IncomesPageClient() {
     setDeleteConfirmId(null);
   }, [deleteSaving]);
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/incomes");
+      const res = await fetch(
+        `/api/incomes?month=${encodeURIComponent(listYearMonth)}`
+      );
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Erro ao carregar receitas.");
@@ -148,11 +154,11 @@ export function IncomesPageClient() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [listYearMonth]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   useEffect(() => {
     if (!deleteConfirmId || editingId) return;

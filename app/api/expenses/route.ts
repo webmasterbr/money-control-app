@@ -1,16 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { parseExpenseListMonthParam } from "@/lib/dashboardMonth";
 import { expenseSchema } from "@/lib/validation";
 import { createExpense, listExpenses } from "@/services/expenseService";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const user = await getCurrentUser();
 
   if (!user) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
-  const expenses = await listExpenses(user.id);
+  const monthParsed = parseExpenseListMonthParam(
+    request.nextUrl.searchParams.get("month")
+  );
+
+  if ("error" in monthParsed) {
+    return NextResponse.json({ error: monthParsed.error }, { status: 400 });
+  }
+
+  const expenses = await listExpenses(user.id, {
+    competenceMonth: monthParsed.competenceMonth
+  });
   return NextResponse.json({ expenses });
 }
 
@@ -26,7 +37,11 @@ export async function POST(request: NextRequest) {
     const parsed = expenseSchema.safeParse({
       ...body,
       amount: typeof body.amount === "string" ? parseFloat(body.amount) : body.amount,
-      isFixed: body.isFixed ?? false
+      isFixed: body.isFixed ?? false,
+      dueDay:
+        body.dueDay === null || body.dueDay === ""
+          ? undefined
+          : body.dueDay
     });
 
     if (!parsed.success) {

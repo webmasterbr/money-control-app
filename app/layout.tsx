@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
 import { BottomNav } from "@/components/BottomNav";
 import "./globals.css";
@@ -46,7 +47,11 @@ export default async function RootLayout({
           <footer className="mt-6 text-xs text-slate-500">
             &copy; {new Date().getFullYear()} Saldo Certo
           </footer>
-          {user ? <BottomNav /> : null}
+          {user ? (
+            <Suspense fallback={null}>
+              <BottomNav />
+            </Suspense>
+          ) : null}
         </div>
       </body>
     </html>

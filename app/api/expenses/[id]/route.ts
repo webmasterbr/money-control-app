@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { expenseSchema } from "@/lib/validation";
+import {
+  EXPENSE_FIXED_DUE_DAY_MESSAGE,
+  expensePartialWithoutDueDaySchema
+} from "@/lib/validation";
 import { deleteExpense, updateExpense } from "@/services/expenseService";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
-
-const expensePartialWithoutDueDay = expenseSchema.partial().omit({ dueDay: true });
 
 export async function PUT(request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
@@ -26,8 +27,9 @@ export async function PUT(request: NextRequest, context: RouteContext) {
           ? parseFloat(body.amount)
           : body.amount;
 
-    const parsed = expensePartialWithoutDueDay.safeParse({
-      ...body,
+    const { dueDay: bodyDueDay, ...bodyRest } = body;
+    const parsed = expensePartialWithoutDueDaySchema.safeParse({
+      ...bodyRest,
       amount: amountParsed
     });
 
@@ -44,13 +46,29 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       dueDay = null;
     } else if (isFixed === true) {
       if (
-        body.dueDay === null ||
-        body.dueDay === "" ||
-        body.dueDay === undefined
+        bodyDueDay === null ||
+        bodyDueDay === "" ||
+        bodyDueDay === undefined
       ) {
         dueDay = null;
       } else {
-        dueDay = Number(body.dueDay);
+        dueDay = Number(bodyDueDay);
+      }
+    }
+
+    if (isFixed === true) {
+      if (
+        dueDay === null ||
+        dueDay === undefined ||
+        typeof dueDay !== "number" ||
+        !Number.isInteger(dueDay) ||
+        dueDay < 1 ||
+        dueDay > 31
+      ) {
+        return NextResponse.json(
+          { error: EXPENSE_FIXED_DUE_DAY_MESSAGE },
+          { status: 400 }
+        );
       }
     }
 

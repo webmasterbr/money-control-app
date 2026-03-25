@@ -9,13 +9,15 @@ Aplicação web minimalista para **gerenciamento de finanças pessoais**, constr
 - **Estilização**: Tailwind CSS
 - **Banco de dados**: PostgreSQL
 - **ORM**: Prisma
+- **Validação**: Zod (schemas em `lib/validation.ts`)
 - **Autenticação**: JWT com cookies HttpOnly
 
 Estrutura principal de pastas:
 
 - `app/` – páginas, rotas de API (App Router) e layout
 - `components/` – componentes de UI reutilizáveis (client e server components)
-- `lib/` – helpers de infraestrutura (Prisma, auth, validações)
+- `lib/` – helpers de infraestrutura (Prisma, auth, validações, mês do dashboard)
+- `lib/hooks/` – hooks de cliente (ex.: `useDashboardMonth`)
 - `services/` – lógica de negócio (incomes, expenses, dashboard)
 - `prisma/` – schema e migrações do Prisma
 - `types/` – tipos compartilhados (reservado para futuras extensões)
@@ -62,7 +64,7 @@ Relacionamentos:
 - `description` (string opcional)
 - `date` (DateTime)
 - `isFixed` (boolean, default `false`)
-- `dueDay` (int opcional – dia de vencimento)
+- `dueDay` (int opcional no banco; **obrigatório na aplicação** quando `isFixed === true`, inteiro **1–31** – validado no Zod, na API PUT e no formulário)
 - `competenceMonth` (string `YYYY-MM`, **derivado da `date`** ao criar/atualizar no serviço; não é enviado pelo cliente)
 - `createdAt`
 
@@ -89,7 +91,8 @@ Arquivos principais:
 - `app/api/auth/register/route.ts` – cria usuário, valida dados, faz hash da senha, seta cookie de sessão
 - `app/api/auth/login/route.ts` – autentica credenciais, gera JWT e seta cookie
 - `app/api/auth/logout/route.ts` – limpa cookie de sessão (`POST`)
-- `components/BottomNav.tsx` – navegação inferior (logado): Dashboard, Receitas, Despesas, **Config** (menu com **Perfil** e **Sair** via `LogoutButton`).
+- `components/BottomNav.tsx` – navegação inferior (logado): Dashboard, Receitas, Despesas, **Config** (menu com **Perfil** e **Sair** via `LogoutButton`). Os links Dashboard / Receitas / Despesas preservam **`?month=YYYY-MM`** quando esse parâmetro é válido na URL (via `useDashboardMonth`).
+- `app/layout.tsx` – envolve `BottomNav` em `<Suspense>` (requisito do `useSearchParams` no hook acima).
 - `components/LogoutButton.tsx` – encerra sessão (`POST /api/logout`); usado no menu Config.
 - `app/profile/page.tsx` – página **Perfil** (nome, e-mail, data de cadastro).
 - `app/api/auth/me/route.ts` – retorna dados do usuário autenticado
@@ -110,14 +113,14 @@ Fluxo resumido:
 Camada de serviço:
 
 - `services/incomeService.ts`
-  - `listIncomes(userId)` – lista receitas do usuário, ordenadas por data desc.
+  - `listIncomes(userId, { yearMonth })` – lista receitas cujo **`date`** cai no mês calendário `yearMonth` (`YYYY-MM`), ordenadas por data desc.
   - `createIncome(userId, data)` – cria nova receita.
   - `updateIncome(userId, incomeId, data)` – atualiza uma receita do usuário.
   - `deleteIncome(userId, incomeId)` – exclui receita do usuário.
 
 Rotas de API:
 
-- `GET /api/incomes` – lista receitas do usuário autenticado.
+- `GET /api/incomes?month=YYYY-MM` – lista receitas do mês (query opcional: ausente ou vazio → **mês calendário atual**; formato inválido → **400** com `Mês inválido`). Implementação: `parseYearMonthListQuery` em `lib/dashboardMonth.ts`.
 - `POST /api/incomes` – cria receita (validação com Zod em `incomeSchema`).
 - `PUT /api/incomes/[id]` – atualiza receita específica.
 - `DELETE /api/incomes/[id]` – exclui receita específica.
@@ -126,9 +129,9 @@ UI:
 
 - Página: `app/incomes/page.tsx` (Server Component)
   - Garante que o usuário está logado via `getCurrentUser`.
-  - Renderiza `IncomesPageClient`.
+  - Lê `searchParams.month`, resolve o mês com `resolveDashboardMonth` (mesma regra que o dashboard) e passa `listYearMonth` ao cliente.
 - Componente: `components/IncomesPageClient.tsx` (Client Component)
-  - Faz `GET /api/incomes` ao montar.
+  - Carrega dados com `GET /api/incomes?month=...` alinhado ao mês da página.
   - Formulário simples para criar receita:
     - `amount`, `category`, `date`, `description`.
   - Lista em tabela responsiva com formatação de valor em BRL.
@@ -139,26 +142,27 @@ UI:
 Camada de serviço:
 
 - `services/expenseService.ts`
-  - `listExpenses(userId)` – lista despesas do usuário.
-  - `createExpense(userId, data)` – cria despesa (inclusive fixa).
-  - `updateExpense(userId, expenseId, data)` – atualiza despesa.
+  - `listExpenses(userId, { competenceMonth })` – lista despesas do usuário com **`competenceMonth`** igual ao mês pedido (`YYYY-MM`), ordenadas por data desc.
+  - `createExpense(userId, data)` – cria despesa (inclusive fixa); define `competenceMonth` a partir da data.
+  - `updateExpense(userId, expenseId, data)` – atualiza despesa (recalcula `competenceMonth` se `date` mudar).
   - `deleteExpense(userId, expenseId)` – exclui despesa.
 
 Rotas de API:
 
-- `GET /api/expenses` – lista despesas do usuário autenticado.
-- `POST /api/expenses` – cria despesa (validação com Zod em `expenseSchema`).
-- `PUT /api/expenses/[id]` – atualiza despesa.
+- `GET /api/expenses?month=YYYY-MM` – lista por competência (query opcional: ausente ou vazio → **mês atual**; inválido → **400**). Implementação: `parseExpenseListMonthParam` em `lib/dashboardMonth.ts`.
+- `POST /api/expenses` – cria despesa (`expenseSchema` no Zod: se `isFixed`, exige `dueDay` **1–31**).
+- `PUT /api/expenses/[id]` – atualização parcial do corpo validada com **`expensePartialWithoutDueDaySchema`** (`dueDay` vem à parte do JSON e é checado no handler quando `isFixed`); evita `.partial()` direto no schema com `.refine()` por limitação do **Zod 4**.
 - `DELETE /api/expenses/[id]` – exclui despesa.
 
 UI:
 
 - Página: `app/expenses/page.tsx` (Server Component)
-  - Garante autenticação e renderiza `ExpensesPageClient`.
+  - Garante autenticação, resolve `searchParams.month` com `resolveDashboardMonth` e passa **`listCompetenceMonth`** a `ExpensesPageClient`.
 - Componente: `components/ExpensesPageClient.tsx` (Client Component)
+  - Carrega lista com `GET /api/expenses?month=...` coerente com o mês da página; após criar/editar/excluir, recarrega com o mesmo mês.
   - Formulário focado em **registro rápido** (campos reutilizados em modal de edição):
     - `amount`, `category`, `description`, `date`; `competenceMonth` é calculada no backend a partir da data (`lib/expenseCompetence.ts`).
-    - `isFixed` (checkbox) e `dueDay` (dia vencimento, opcional).
+    - `isFixed` (checkbox) e `dueDay`: **obrigatório (1–31)** quando fixa (HTML5 `required`, validação no cliente e nas APIs).
   - Campos compartilhados: `components/ExpenseFormFields.tsx`.
   - Tabela com:
     - Data, categoria, descrição, tipo (fixa/variável), vencimento, mês de competência, valor.
@@ -177,7 +181,12 @@ Camada de serviço:
     - `next7Days` (padrão) – apenas fixas com `dueDay` na janela do dia atual até +7 dias (modo operacional).
     - `fullMonth` – todas as fixas do mês, ordenadas por `dueDay` (nulos por último).
 
-- `lib/dashboardMonth.ts` – interpreta `?month=YYYY-MM` (query opcional; inválido ou ausente → mês corrente no fuso do servidor). Se o mês selecionado for o **mês calendário atual**, usa **hoje real** como `referenceDate`; caso contrário, usa o **dia 1** do mês selecionado (evita ambiguidade de UTC em `new Date('YYYY-MM')`).
+- `lib/dashboardMonth.ts` – utilitários compartilhados para o mês na URL:
+  - `resolveDashboardMonth` – usado nas páginas **dashboard**, **receitas** e **despesas**: `?month=YYYY-MM` opcional; inválido ou ausente → mês corrente (fuso do servidor na resolução server-side). Se o mês for o **calendário atual**, `referenceDate` é **hoje**; senão, **dia 1** do mês (evita ambiguidade de UTC em `new Date('YYYY-MM')`).
+  - `parseYearMonthListQuery` / `parseExpenseListMonthParam` – parse para APIs de listagem (receitas por `date`, despesas por `competenceMonth`).
+  - `isValidDashboardMonthQuery` – validação no cliente (mesmo padrão `YYYY-MM` que o servidor).
+  - `ROUTES_WITH_MONTH_SEARCH_PARAM` – rotas em que a navegação deve preservar `?month=`.
+- `lib/hooks/useDashboardMonth.ts` – hook de cliente: expõe `yearMonth`, `monthQuery`, `hrefWithMonth(path)` etc., alinhado a `resolveDashboardMonth` / `isValidDashboardMonthQuery`.
 
 Página:
 
@@ -196,6 +205,13 @@ Gráficos:
 - `components/IncomesPieChart.tsx` (Client Component, Recharts)
   - Recebe `incomesByCategory` e desenha gráfico de pizza responsivo.
 
+### 5. Mês selecionado na URL (`?month=YYYY-MM`)
+
+- O **dashboard** grava o mês em `?month=` ao mudar período (`DashboardMonthSelector`).
+- As páginas **Receitas** e **Despesas** leem o mesmo parâmetro no servidor e filtram listas de acordo (receitas pelo campo `date`, despesas por `competenceMonth`).
+- A **`BottomNav`** mantém `?month=` ao alternar entre `/dashboard`, `/incomes` e `/expenses`, desde que o valor seja válido; URLs inválidas são ignoradas no cliente e caem no mês atual na resolução server-side.
+- APIs `GET /api/incomes` e `GET /api/expenses` repetem a regra de parse (mês atual se ausente; **400** se o formato for inválido).
+
 ---
 
 ## Arquitetura e separação de responsabilidades
@@ -205,7 +221,7 @@ Gráficos:
     - Garantir autenticação.
     - Chamar serviços de domínio.
     - Compor layout com componentes de UI.
-  - `components/*` concentra Client Components (formularios, tabelas, gráficos).
+  - `components/*` concentra Client Components (formulários, tabelas, gráficos).
 
 - **Negócio / domínio**:
   - `services/*` implementa regras de negócio e acesso ao banco via Prisma.
@@ -218,7 +234,9 @@ Gráficos:
 - **Infraestrutura**:
   - `lib/prisma.ts` – singleton do Prisma.
   - `lib/auth.ts` – JWT, cookies, hash de senha.
-  - `lib/validation.ts` – schemas Zod reutilizáveis.
+  - `lib/validation.ts` – schemas Zod reutilizáveis (`expenseSchema` com refine para despesa fixa; `expensePartialWithoutDueDaySchema` só para corpo do **PUT**, sem refine, por compatibilidade com Zod 4).
+  - `lib/dashboardMonth.ts` – mês `YYYY-MM` para páginas e APIs de listagem.
+  - `lib/hooks/useDashboardMonth.ts` – leitura consistente de `?month=` no cliente.
 
 Isso permite escalar facilmente para novos canais (ex.: API externa, jobs de notificação) reutilizando os mesmos serviços de negócio.
 
@@ -324,9 +342,9 @@ Fluxo sugerido:
 1. Acessar `/register` para criar o primeiro usuário.
 2. Fazer login em `/login` (ou `/`, que redireciona para `/login` se não autenticado).
 3. Navegar:
-   - `/dashboard` – visão geral.
-   - `/incomes` – receitas.
-   - `/expenses` – despesas.
+   - `/dashboard` – visão geral (opcional: `?month=YYYY-MM` para outro mês).
+   - `/incomes` – receitas do mês (mesma query opcional; alinhada ao dashboard se vier pela BottomNav).
+   - `/expenses` – despesas por **competência** do mês (mesma ideia).
 
 ---
 
@@ -359,7 +377,7 @@ Sugestões de evolução futura:
 - **Notificações por e-mail** para despesas fixas próximas do vencimento:
   - Criar um job/cron que use `services/dashboardService` ou novas queries em `services/expenseService`.
 - **Multi-moeda e multi-carteira** (contas bancárias, cartão, etc.).
-- **Filtros e relatórios avançados** (por período, por categoria, por centro de custo).
+- **Relatórios e filtros adicionais** (intervalos personalizados, categorias combinadas, centros de custo) — o filtro por **mês** (`?month=`) já cobre o caso base de receitas e despesas por período.
 - **Exportação** (CSV/Excel) das receitas e despesas.
 
 Essa base já está preparada com boa separação entre UI, domínio e infraestrutura para suportar essas evoluções.

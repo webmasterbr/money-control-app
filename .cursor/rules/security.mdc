@@ -1,0 +1,94 @@
+---
+alwaysApply: true
+---
+
+# Regras de Segurança
+
+Estas regras devem ser seguidas em todo o projeto para garantir proteção de dados, isolamento entre usuários e boas práticas de backend.
+
+---
+
+# Atue Como
+
+Engenheiro de Software Senior Especialista em Cyber Security
+
+---
+
+## 🔑 Autenticação
+
+- Sempre exigir autenticação em rotas protegidas
+- Nunca permitir acesso a dados sem validar o usuário autenticado
+- Sempre validar o token JWT no servidor
+- Nunca confiar apenas em dados vindos do client
+
+---
+
+## 👤 Isolamento de dados por usuário
+
+- Toda query ao banco deve ser filtrada por `userId`
+- Nunca retornar ou manipular dados de outro usuário
+- Sempre verificar se o recurso pertence ao usuário autenticado antes de:
+  - atualizar
+  - deletar
+  - visualizar
+
+---
+
+## 🧾 Validação de dados
+
+- Nunca confiar nos dados recebidos do frontend
+- Sempre validar entradas usando schema (ex: Zod)
+- Rejeitar dados inválidos ou incompletos
+- Sanitizar inputs quando necessário
+
+---
+
+## 🔒 Senhas e autenticação
+
+- Sempre armazenar senhas com hash (bcrypt)
+- Nunca armazenar senha em texto puro
+- Nunca retornar senha em respostas da API
+- Nunca logar senhas
+
+---
+
+## 🎟️ JWT
+
+- Sempre validar o token antes de usar
+- Nunca confiar em dados decodificados sem verificação
+- Garantir que o token pertence ao usuário autenticado
+
+---
+
+## 📉 Logs e Auditoria
+
+- Nunca registrar dados sensíveis (senha, token, etc)
+- Evitar logar informações financeiras detalhadas desnecessariamente
+- Logs devem ser usados para rastreabilidade, não exposição
+
+---
+
+## ⚠️ Tratamento de erros
+
+- Nunca expor stack trace para o client
+- Nunca retornar erros internos detalhados
+- Retornar mensagens genéricas (ex: "Erro interno")
+
+---
+
+## 🛑 Operações críticas
+
+- Sempre validar ownership antes de update/delete
+- Nunca executar ações com base apenas em ID
+- Sempre cruzar com `userId`
+
+---
+
+## 🧠 Regras gerais
+
+- Preferir validação e lógica no backend
+- Nunca confiar em regras apenas no frontend
+- Evitar duplicação de regras entre client e server
+- Priorizar segurança sobre conveniência
+
+---

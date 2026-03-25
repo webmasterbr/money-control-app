@@ -2,9 +2,15 @@ import { competenceMonthFromDateInput } from "@/lib/expenseCompetence";
 import { prisma } from "@/lib/prisma";
 import type { ExpenseInput } from "@/lib/validation";
 
-export async function listExpenses(userId: string) {
+export async function listExpenses(
+  userId: string,
+  filters: { competenceMonth: string }
+) {
   return prisma.expense.findMany({
-    where: { userId },
+    where: {
+      userId,
+      competenceMonth: filters.competenceMonth
+    },
     orderBy: { date: "desc" }
   });
 }

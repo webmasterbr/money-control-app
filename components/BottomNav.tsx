@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { LogoutButton } from "@/components/LogoutButton";
+import { useDashboardMonth } from "@/lib/hooks/useDashboardMonth";
 
 const MAIN_NAV = [
   { href: "/dashboard", label: "Dashboard", icon: "🏠" },
@@ -13,6 +14,7 @@ const MAIN_NAV = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { hrefWithMonth } = useDashboardMonth();
   const [configOpen, setConfigOpen] = useState(false);
   const configRef = useRef<HTMLDivElement>(null);
 
@@ -56,7 +58,7 @@ export function BottomNav() {
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={hrefWithMonth(item.href)}
               className={`flex flex-col items-center justify-center gap-0.5 rounded-lg py-2 text-[0.65rem] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
                 active
                   ? "text-primary-400"

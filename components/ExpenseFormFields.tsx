@@ -193,6 +193,8 @@ export function ExpenseFormFields({ idPrefix, form, setForm }: Props) {
               setForm((f) => ({ ...f, dueDay: e.target.value }))
             }
             disabled={!form.isFixed}
+            required={form.isFixed}
+            aria-required={form.isFixed}
           />
         </div>
       </div>
