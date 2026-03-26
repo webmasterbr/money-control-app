@@ -1,3 +1,4 @@
+import { isValidCompetenceMonth } from "@/lib/dashboardMonth";
 import { z } from "zod";
 
 export const registerSchema = z.object({
@@ -27,7 +28,11 @@ export const incomeSchema = z.object({
   amount: z.number().positive("Valor deve ser maior que zero"),
   category: z.string().min(1, "Categoria é obrigatória"),
   description: z.string().optional(),
-  date: z.string().or(z.date()) // será normalizado na API
+  date: z.string().or(z.date()), // será normalizado na API
+  competenceMonth: z
+    .string()
+    .refine(isValidCompetenceMonth, "Mês inválido")
+    .optional()
 });
 
 export const EXPENSE_FIXED_DUE_DAY_MESSAGE =
@@ -39,6 +44,10 @@ const expenseObjectSchema = z.object({
   category: z.string().min(1, "Categoria é obrigatória"),
   description: z.string().optional(),
   date: z.string().or(z.date()),
+  competenceMonth: z
+    .string()
+    .refine(isValidCompetenceMonth, "Mês inválido")
+    .optional(),
   isFixed: z.boolean().default(false),
   dueDay: z.number().int().min(1).max(31).optional()
 });
@@ -57,6 +66,10 @@ export const expenseSchema = expenseObjectSchema.refine(
 export const expensePartialWithoutDueDaySchema = expenseObjectSchema
   .partial()
   .omit({ dueDay: true });
+
+export const importFixedExpensesSchema = z.object({
+  month: z.string().refine(isValidCompetenceMonth, "Mês inválido")
+});
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

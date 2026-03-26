@@ -1,5 +1,6 @@
 "use client";
 
+import { categoryLabelByValue } from "@/components/ExpenseFormFields";
 import { Pie, PieChart, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 const COLORS = [
@@ -9,18 +10,10 @@ const COLORS = [
   "#f97316",
   "#ec4899",
   "#8b5cf6",
-  "#14b8a6"
+  "#14b8a6",
+  "#06b6d4",
+  "#f43f5e"
 ];
-
-const CATEGORY_LABEL_BY_VALUE: Record<string, string> = {
-  FOOD: "Alimentação",
-  HOUSING: "Moradia",
-  TRANSPORT: "Transporte",
-  HEALTH: "Saúde",
-  EDUCATION: "Educação",
-  LEISURE: "Lazer",
-  OTHER: "Outros"
-};
 
 export type ExpensesPieDatum = {
   category: string;
@@ -42,7 +35,7 @@ export function ExpensesPieChart({ data }: Props) {
 
   const chartData = data.map((item) => ({
     ...item,
-    categoryLabel: CATEGORY_LABEL_BY_VALUE[item.category] ?? item.category
+    categoryLabel: categoryLabelByValue[item.category] ?? item.category
   }));
 
   return (

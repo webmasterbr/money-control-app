@@ -9,6 +9,8 @@ import {
 } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
+import { formatCompetenceMonth } from "@/lib/dashboardMonth";
+import { getDefaultDateForMonth } from "@/lib/expenseCompetence";
 
 function formatCurrencyInput(rawValue: string) {
   const digitsOnly = rawValue.replace(/\D/g, "");
@@ -87,7 +89,7 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
     amount: "",
     category: "",
     description: "",
-    date: new Date().toISOString().slice(0, 10)
+    date: getDefaultDateForMonth(listYearMonth)
   });
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -95,7 +97,7 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
     amount: "",
     category: "",
     description: "",
-    date: new Date().toISOString().slice(0, 10)
+    date: getDefaultDateForMonth(listYearMonth)
   });
   const [editError, setEditError] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
@@ -159,6 +161,13 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      date: getDefaultDateForMonth(listYearMonth)
+    }));
+  }, [listYearMonth]);
 
   useEffect(() => {
     if (!deleteConfirmId || editingId) return;
@@ -271,7 +280,8 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
           amount: parsedAmount,
           category: editForm.category,
           description: editForm.description.trim() || undefined,
-          date: editForm.date
+          date: editForm.date,
+          competenceMonth: listYearMonth
         })
       });
       const data = await res.json();
@@ -304,7 +314,8 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          amount: parsedAmount
+          amount: parsedAmount,
+          competenceMonth: listYearMonth
         })
       });
       const data = await res.json();
@@ -352,11 +363,15 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
   const pendingDeleteIncome = deleteConfirmId
     ? items.find((i) => i.id === deleteConfirmId)
     : undefined;
+  const competenceLabel = formatCompetenceMonth(listYearMonth);
 
   return (
     <div className="space-y-6">
       <section className="card p-4">
         <h1 className="text-lg font-semibold">Receitas</h1>
+        <p className="mt-1 text-sm font-medium text-slate-300">
+          Receitas — {competenceLabel}
+        </p>
         <p className="mt-1 text-sm text-slate-400">
           Cadastre rapidamente suas receitas do mês.
         </p>

@@ -1,6 +1,30 @@
-import { competenceMonthFromDateInput } from "@/lib/expenseCompetence";
+import { Prisma } from "@prisma/client";
+import {
+  isValidCompetenceMonth,
+  previousCompetenceMonth
+} from "@/lib/dashboardMonth";
+import {
+  clampDateInputToCompetenceMonth,
+  competenceMonthFromDateInput,
+  dateInputToLocalDate,
+  dateStringForCompetenceAndDueDay
+} from "@/lib/expenseCompetence";
 import { prisma } from "@/lib/prisma";
 import type { ExpenseInput } from "@/lib/validation";
+
+function normalizeDateInput(date: string | Date): string {
+  if (typeof date === "string") {
+    const ymd = date.slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+      throw new Error("Data inválida");
+    }
+    return ymd;
+  }
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
 
 export async function listExpenses(
   userId: string,
@@ -15,24 +39,34 @@ export async function listExpenses(
   });
 }
 
-export async function createExpense(userId: string, data: ExpenseInput) {
-  const competenceMonth = competenceMonthFromDateInput(data.date);
+export async function createExpense(
+  userId: string,
+  data: ExpenseInput & { competenceMonth?: string }
+) {
+  const inputDate = normalizeDateInput(data.date);
+  const requestedCompetenceMonth =
+    data.competenceMonth ?? competenceMonthFromDateInput(inputDate);
+  const normalizedDateInput = clampDateInputToCompetenceMonth(
+    inputDate,
+    requestedCompetenceMonth
+  );
+
   return prisma.expense.create({
     data: {
       userId,
       amount: data.amount,
       category: data.category,
       description: data.description,
-      date: new Date(data.date),
+      date: dateInputToLocalDate(normalizedDateInput),
       isFixed: data.isFixed,
       dueDay: data.dueDay,
-      competenceMonth
+      competenceMonth: requestedCompetenceMonth
     }
   });
 }
 
 type ExpenseUpdatePayload = Partial<
-  Omit<ExpenseInput, "dueDay"> & { dueDay: number | null }
+  Omit<ExpenseInput, "dueDay"> & { dueDay: number | null; competenceMonth?: string }
 >;
 
 export async function updateExpense(
@@ -48,8 +82,15 @@ export async function updateExpense(
     prismaData.description = data.description || null;
   }
   if (data.date !== undefined) {
-    prismaData.date = new Date(data.date);
-    prismaData.competenceMonth = competenceMonthFromDateInput(data.date);
+    const inputDate = normalizeDateInput(data.date);
+    const targetCompetenceMonth =
+      data.competenceMonth ?? competenceMonthFromDateInput(inputDate);
+    const normalizedDateInput = clampDateInputToCompetenceMonth(
+      inputDate,
+      targetCompetenceMonth
+    );
+    prismaData.date = dateInputToLocalDate(normalizedDateInput);
+    prismaData.competenceMonth = targetCompetenceMonth;
   }
   if (data.isFixed !== undefined) prismaData.isFixed = data.isFixed;
 
@@ -74,6 +115,86 @@ export async function deleteExpense(userId: string, expenseId: string) {
       id: expenseId,
       userId
     }
+  });
+}
+
+export async function importFixedExpenses(
+  userId: string,
+  currentMonth: string
+): Promise<{ imported: number; skipped: number }> {
+  if (!isValidCompetenceMonth(currentMonth)) {
+    throw new Error("Mês inválido");
+  }
+
+  const previousMonth = previousCompetenceMonth(currentMonth);
+
+  return prisma.$transaction(async (tx) => {
+    const previousFixed = await tx.expense.findMany({
+      where: {
+        userId,
+        competenceMonth: previousMonth,
+        isFixed: true
+      }
+    });
+
+    const currentRows = await tx.expense.findMany({
+      where: { userId, competenceMonth: currentMonth },
+      select: { sourceExpenseId: true }
+    });
+
+    const rootsInTarget = new Set(
+      currentRows
+        .map((e) => e.sourceExpenseId)
+        .filter((id): id is string => id !== null)
+    );
+
+    let imported = 0;
+    let skipped = 0;
+
+    for (const exp of previousFixed) {
+      const rootId = exp.sourceExpenseId ?? exp.id;
+      if (rootsInTarget.has(rootId)) {
+        skipped++;
+        continue;
+      }
+
+      const dueDayForDate = exp.dueDay ?? 1;
+      const dateStr = dateStringForCompetenceAndDueDay(
+        currentMonth,
+        dueDayForDate
+      );
+
+      try {
+        const [y, mo, d] = dateStr.split("-").map(Number);
+        await tx.expense.create({
+          data: {
+            userId,
+            amount: exp.amount,
+            category: exp.category,
+            description: exp.description,
+            date: new Date(y, mo - 1, d),
+            isFixed: true,
+            dueDay: exp.dueDay,
+            competenceMonth: currentMonth,
+            sourceExpenseId: rootId
+          }
+        });
+        rootsInTarget.add(rootId);
+        imported++;
+      } catch (e) {
+        if (
+          e instanceof Prisma.PrismaClientKnownRequestError &&
+          e.code === "P2002"
+        ) {
+          rootsInTarget.add(rootId);
+          skipped++;
+        } else {
+          throw e;
+        }
+      }
+    }
+
+    return { imported, skipped };
   });
 }
 

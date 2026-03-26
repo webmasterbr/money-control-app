@@ -66,13 +66,19 @@ Relacionamentos:
 - `isFixed` (boolean, default `false`)
 - `dueDay` (int opcional no banco; **obrigatório na aplicação** quando `isFixed === true`, inteiro **1–31** – validado no Zod, na API PUT e no formulário)
 - `competenceMonth` (string `YYYY-MM`, **derivado da `date`** ao criar/atualizar no serviço; não é enviado pelo cliente)
+- `sourceExpenseId` (UUID opcional, FK → `Expense.id`, `onDelete: SetNull`) – **uso interno**: `null` em despesas criadas manualmente; nas criadas pela **importação de despesas fixas**, aponta para o **ID raiz** da cadeia (`sourceExpenseId ?? id` da despesa de origem), para idempotência e evitar duplicar o mesmo vínculo no mesmo mês.
 - `createdAt`
 
-Índices:
+Relacionamentos:
+
+- `sourceExpense` / `importedFrom` – auto-relação para a despesa raiz e cópias importadas.
+
+Índices e restrições:
 
 - `@@index([userId, date])`
 - `@@index([userId, isFixed])`
 - `@@index([userId, competenceMonth])`
+- `@@unique([userId, competenceMonth, sourceExpenseId])` – garante no máximo uma despesa importada por raiz e mês de competência (várias linhas com `sourceExpenseId` nulo continuam permitidas no PostgreSQL).
 
 ---
 
@@ -143,14 +149,16 @@ Camada de serviço:
 
 - `services/expenseService.ts`
   - `listExpenses(userId, { competenceMonth })` – lista despesas do usuário com **`competenceMonth`** igual ao mês pedido (`YYYY-MM`), ordenadas por data desc.
-  - `createExpense(userId, data)` – cria despesa (inclusive fixa); define `competenceMonth` a partir da data.
+  - `createExpense(userId, data)` – cria despesa (inclusive fixa); define `competenceMonth` a partir da data; `sourceExpenseId` permanece `null`.
   - `updateExpense(userId, expenseId, data)` – atualiza despesa (recalcula `competenceMonth` se `date` mudar).
   - `deleteExpense(userId, expenseId)` – exclui despesa.
+  - `importFixedExpenses(userId, currentMonth)` – importação **sob demanda** (não roda ao trocar de mês): lê despesas **fixas** (`isFixed === true`) do **mês de competência anterior** a `currentMonth`, e para cada uma cria uma cópia no `currentMonth` se ainda não existir linha com o mesmo vínculo raiz (`sourceExpenseId` da cópia = `origem.sourceExpenseId ?? origem.id`). Copia `amount`, `category`, `description`, `isFixed`, `dueDay`; ajusta `competenceMonth` e `date` (dia de vencimento no mês alvo, com **clamp** ao último dia do mês via `dateStringForCompetenceAndDueDay` em `lib/expenseCompetence.ts`). Transação com tratamento de **`P2002`** (unique) para idempotência sob requisições concorrentes. Retorna `{ imported, skipped }`.
 
 Rotas de API:
 
 - `GET /api/expenses?month=YYYY-MM` – lista por competência (query opcional: ausente ou vazio → **mês atual**; inválido → **400**). Implementação: `parseExpenseListMonthParam` em `lib/dashboardMonth.ts`.
 - `POST /api/expenses` – cria despesa (`expenseSchema` no Zod: se `isFixed`, exige `dueDay` **1–31**).
+- `POST /api/expenses/import-fixed` – importa despesas fixas do mês anterior para o mês indicado. Body JSON: `{ "month": "YYYY-MM" }` (mês em visualização / alvo), validado com **`importFixedExpensesSchema`** em `lib/validation.ts`. O servidor deriva o mês anterior internamente (não aceita `fromMonth` no cliente). Resposta **200**: `{ "imported": number, "skipped": number }`. **401** se não autenticado; **400** se o body for inválido; **500** com mensagem genérica em falha interna.
 - `PUT /api/expenses/[id]` – atualização parcial do corpo validada com **`expensePartialWithoutDueDaySchema`** (`dueDay` vem à parte do JSON e é checado no handler quando `isFixed`); evita `.partial()` direto no schema com `.refine()` por limitação do **Zod 4**.
 - `DELETE /api/expenses/[id]` – exclui despesa.
 
@@ -160,6 +168,7 @@ UI:
   - Garante autenticação, resolve `searchParams.month` com `resolveDashboardMonth` e passa **`listCompetenceMonth`** a `ExpensesPageClient`.
 - Componente: `components/ExpensesPageClient.tsx` (Client Component)
   - Carrega lista com `GET /api/expenses?month=...` coerente com o mês da página; após criar/editar/excluir, recarrega com o mesmo mês.
+  - Botão minimalista **Importar despesas fixas** (ao lado do título da lista): `POST /api/expenses/import-fixed` com `{ month: listCompetenceMonth }`, feedback com contagem importada/ignorada e nova carga da lista. `sourceExpenseId` **não** é exibido na UI.
   - Formulário focado em **registro rápido** (campos reutilizados em modal de edição):
     - `amount`, `category`, `description`, `date`; `competenceMonth` é calculada no backend a partir da data (`lib/expenseCompetence.ts`).
     - `isFixed` (checkbox) e `dueDay`: **obrigatório (1–31)** quando fixa (HTML5 `required`, validação no cliente e nas APIs).
@@ -184,6 +193,7 @@ Camada de serviço:
 - `lib/dashboardMonth.ts` – utilitários compartilhados para o mês na URL:
   - `resolveDashboardMonth` – usado nas páginas **dashboard**, **receitas** e **despesas**: `?month=YYYY-MM` opcional; inválido ou ausente → mês corrente (fuso do servidor na resolução server-side). Se o mês for o **calendário atual**, `referenceDate` é **hoje**; senão, **dia 1** do mês (evita ambiguidade de UTC em `new Date('YYYY-MM')`).
   - `parseYearMonthListQuery` / `parseExpenseListMonthParam` – parse para APIs de listagem (receitas por `date`, despesas por `competenceMonth`).
+  - `isValidCompetenceMonth` / `previousCompetenceMonth` – validação de string `YYYY-MM` e cálculo do mês de competência anterior (usados na importação de despesas fixas).
   - `isValidDashboardMonthQuery` – validação no cliente (mesmo padrão `YYYY-MM` que o servidor).
   - `ROUTES_WITH_MONTH_SEARCH_PARAM` – rotas em que a navegação deve preservar `?month=`.
 - `lib/hooks/useDashboardMonth.ts` – hook de cliente: expõe `yearMonth`, `monthQuery`, `hrefWithMonth(path)` etc., alinhado a `resolveDashboardMonth` / `isValidDashboardMonthQuery`.
@@ -234,8 +244,9 @@ Gráficos:
 - **Infraestrutura**:
   - `lib/prisma.ts` – singleton do Prisma.
   - `lib/auth.ts` – JWT, cookies, hash de senha.
-  - `lib/validation.ts` – schemas Zod reutilizáveis (`expenseSchema` com refine para despesa fixa; `expensePartialWithoutDueDaySchema` só para corpo do **PUT**, sem refine, por compatibilidade com Zod 4).
-  - `lib/dashboardMonth.ts` – mês `YYYY-MM` para páginas e APIs de listagem.
+  - `lib/validation.ts` – schemas Zod reutilizáveis (`expenseSchema` com refine para despesa fixa; `expensePartialWithoutDueDaySchema` só para corpo do **PUT**, sem refine, por compatibilidade com Zod 4; `importFixedExpensesSchema` para o body de **`POST /api/expenses/import-fixed`**).
+  - `lib/dashboardMonth.ts` – mês `YYYY-MM` para páginas e APIs de listagem; `isValidCompetenceMonth` / `previousCompetenceMonth` para a importação de fixas.
+  - `lib/expenseCompetence.ts` – derivação de `competenceMonth` a partir da data e `dateStringForCompetenceAndDueDay` (importação de fixas).
   - `lib/hooks/useDashboardMonth.ts` – leitura consistente de `?month=` no cliente.
 
 Isso permite escalar facilmente para novos canais (ex.: API externa, jobs de notificação) reutilizando os mesmos serviços de negócio.
@@ -344,7 +355,7 @@ Fluxo sugerido:
 3. Navegar:
    - `/dashboard` – visão geral (opcional: `?month=YYYY-MM` para outro mês).
    - `/incomes` – receitas do mês (mesma query opcional; alinhada ao dashboard se vier pela BottomNav).
-   - `/expenses` – despesas por **competência** do mês (mesma ideia).
+   - `/expenses` – despesas por **competência** do mês (mesma ideia); use **Importar despesas fixas** para copiar as fixas do mês anterior para o mês em tela.
 
 ---
 

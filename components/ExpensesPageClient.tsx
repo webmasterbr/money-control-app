@@ -16,6 +16,8 @@ import {
   parseCurrencyInput,
   type ExpenseFormValues
 } from "@/components/ExpenseFormFields";
+import { formatCompetenceMonth } from "@/lib/dashboardMonth";
+import { getDefaultDateForMonth } from "@/lib/expenseCompetence";
 import { EXPENSE_FIXED_DUE_DAY_MESSAGE } from "@/lib/validation";
 
 type Expense = {
@@ -29,13 +31,12 @@ type Expense = {
   competenceMonth: string;
 };
 
-function emptyFormDefaults(): ExpenseFormValues {
-  const today = new Date();
+function emptyFormDefaults(competenceMonth: string): ExpenseFormValues {
   return {
     amount: "",
     category: "",
     description: "",
-    date: today.toISOString().slice(0, 10),
+    date: getDefaultDateForMonth(competenceMonth),
     isFixed: false,
     dueDay: ""
   };
@@ -49,7 +50,10 @@ function isValidFixedDueDay(form: ExpenseFormValues): boolean {
   return Number.isInteger(n) && n >= 1 && n <= 31;
 }
 
-function buildExpensePayload(form: ExpenseFormValues) {
+function buildExpensePayload(
+  form: ExpenseFormValues,
+  competenceMonth: string
+) {
   const parsedAmount = parseCurrencyInput(form.amount);
   return {
     parsedAmount,
@@ -58,6 +62,7 @@ function buildExpensePayload(form: ExpenseFormValues) {
       category: form.category,
       description: form.description.trim() || undefined,
       date: form.date,
+      competenceMonth,
       isFixed: form.isFixed,
       dueDay:
         form.isFixed && form.dueDay ? Number(form.dueDay) : undefined
@@ -85,18 +90,23 @@ export function ExpensesPageClient({
   const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState<ExpenseFormValues>(() =>
-    emptyFormDefaults()
+    emptyFormDefaults(listCompetenceMonth)
   );
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<ExpenseFormValues>(() =>
-    emptyFormDefaults()
+    emptyFormDefaults(listCompetenceMonth)
   );
   const [editError, setEditError] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
 
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deleteSaving, setDeleteSaving] = useState(false);
+
+  const [importingFixed, setImportingFixed] = useState(false);
+  const [importFixedSuccess, setImportFixedSuccess] = useState<string | null>(
+    null
+  );
 
   const [expenseActionsMenu, setExpenseActionsMenu] =
     useState<ExpenseActionsMenu>(null);
@@ -150,9 +160,44 @@ export function ExpensesPageClient({
     }
   }, [listCompetenceMonth]);
 
+  const handleImportFixed = useCallback(async () => {
+    setImportFixedSuccess(null);
+    setError(null);
+    setImportingFixed(true);
+    try {
+      const res = await fetch("/api/expenses/import-fixed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ month: listCompetenceMonth })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Erro ao importar despesas fixas.");
+        return;
+      }
+      setImportFixedSuccess(
+        `${data.imported} importada(s), ${data.skipped} ignorada(s).`
+      );
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      setError("Erro inesperado ao importar despesas fixas.");
+    } finally {
+      setImportingFixed(false);
+    }
+  }, [listCompetenceMonth, loadData]);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    setImportFixedSuccess(null);
+    setForm((prev) => ({
+      ...prev,
+      date: getDefaultDateForMonth(listCompetenceMonth)
+    }));
+  }, [listCompetenceMonth]);
 
   useEffect(() => {
     if (!editingId) return;
@@ -258,7 +303,10 @@ export function ExpensesPageClient({
       return;
     }
 
-    const { parsedAmount, payload } = buildExpensePayload(form);
+    const { parsedAmount, payload } = buildExpensePayload(
+      form,
+      listCompetenceMonth
+    );
     if (!parsedAmount) {
       setError("Informe um valor válido.");
       return;
@@ -298,7 +346,10 @@ export function ExpensesPageClient({
       return;
     }
 
-    const { parsedAmount, payload } = buildExpensePayload(editForm);
+    const { parsedAmount, payload } = buildExpensePayload(
+      editForm,
+      listCompetenceMonth
+    );
     if (!parsedAmount) {
       setEditError("Informe um valor válido.");
       return;
@@ -353,11 +404,15 @@ export function ExpensesPageClient({
   const pendingDeleteExpense = deleteConfirmId
     ? items.find((i) => i.id === deleteConfirmId)
     : undefined;
+  const competenceLabel = formatCompetenceMonth(listCompetenceMonth);
 
   return (
     <div className="space-y-6">
       <section className="card p-4">
         <h1 className="text-lg font-semibold">Despesas</h1>
+        <p className="mt-1 text-sm font-medium text-slate-300">
+          Despesas — {competenceLabel}
+        </p>
         <p className="mt-1 text-sm text-slate-400">
           Registre rapidamente suas despesas, incluindo fixas.
         </p>
@@ -380,9 +435,22 @@ export function ExpensesPageClient({
       </section>
 
       <section className="card p-4">
-        <h2 className="text-sm font-semibold text-slate-200">
-          Lista de despesas
-        </h2>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-sm font-semibold text-slate-200">
+            Lista de despesas
+          </h2>
+          <button
+            type="button"
+            disabled={importingFixed}
+            onClick={handleImportFixed}
+            className="inline-flex shrink-0 items-center justify-center rounded-lg border border-slate-700/80 bg-transparent px-3 py-1.5 text-xs font-medium text-slate-400 transition-colors hover:border-slate-600 hover:bg-slate-900/80 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {importingFixed ? "Importando…" : "Importar despesas fixas"}
+          </button>
+        </div>
+        {importFixedSuccess ? (
+          <p className="mt-2 text-xs text-slate-500">{importFixedSuccess}</p>
+        ) : null}
 
         {loading ? (
           <p className="mt-3 text-sm text-slate-400">Carregando...</p>

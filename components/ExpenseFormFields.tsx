@@ -5,8 +5,10 @@ export const expenseCategories = [
   { value: "HOUSING", label: "Moradia" },
   { value: "TRANSPORT", label: "Transporte" },
   { value: "HEALTH", label: "Saúde" },
-  { value: "EDUCATION", label: "Educação" },
   { value: "LEISURE", label: "Lazer" },
+  { value: "GIFTS", label: "Presentes" },
+  { value: "DONATIONS", label: "Doações" },
+  { value: "EDUCATION", label: "Educação" },
   { value: "OTHER", label: "Outros" }
 ];
 

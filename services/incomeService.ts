@@ -1,6 +1,24 @@
 import { endOfMonth, startOfMonth } from "date-fns";
+import {
+  clampDateInputToCompetenceMonth,
+  dateInputToLocalDate
+} from "@/lib/expenseCompetence";
 import { prisma } from "@/lib/prisma";
 import type { IncomeInput } from "@/lib/validation";
+
+function normalizeDateInput(date: string | Date): string {
+  if (typeof date === "string") {
+    const ymd = date.slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+      throw new Error("Data inválida");
+    }
+    return ymd;
+  }
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
 
 export async function listIncomes(
   userId: string,
@@ -23,14 +41,22 @@ export async function listIncomes(
   });
 }
 
-export async function createIncome(userId: string, data: IncomeInput) {
+export async function createIncome(
+  userId: string,
+  data: IncomeInput & { competenceMonth?: string }
+) {
+  const inputDate = normalizeDateInput(data.date);
+  const normalizedDateInput = data.competenceMonth
+    ? clampDateInputToCompetenceMonth(inputDate, data.competenceMonth)
+    : inputDate;
+
   return prisma.income.create({
     data: {
       userId,
       amount: data.amount,
       category: data.category,
       description: data.description,
-      date: new Date(data.date)
+      date: dateInputToLocalDate(normalizedDateInput)
     }
   });
 }
@@ -38,8 +64,17 @@ export async function createIncome(userId: string, data: IncomeInput) {
 export async function updateIncome(
   userId: string,
   incomeId: string,
-  data: Partial<IncomeInput>
+  data: Partial<IncomeInput> & { competenceMonth?: string }
 ) {
+  const normalizedDateInput = data.date
+    ? data.competenceMonth
+      ? clampDateInputToCompetenceMonth(
+          normalizeDateInput(data.date),
+          data.competenceMonth
+        )
+      : normalizeDateInput(data.date)
+    : undefined;
+
   return prisma.income.update({
     where: {
       id: incomeId,
@@ -49,7 +84,9 @@ export async function updateIncome(
       amount: data.amount,
       category: data.category,
       description: data.description,
-      date: data.date ? new Date(data.date) : undefined
+      date: normalizedDateInput
+        ? dateInputToLocalDate(normalizedDateInput)
+        : undefined
     }
   });
 }

@@ -43,12 +43,16 @@ model Expense {
   isFixed          Boolean  @default(false)
   dueDay           Int?
   competenceMonth  String   // ex: "2026-03"
+  sourceExpenseId  String?  @db.Uuid
   createdAt        DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceExpense Expense?  @relation("ExpenseImportChain", fields: [sourceExpenseId], references: [id], onDelete: SetNull)
+  importedFrom  Expense[] @relation("ExpenseImportChain")
 
   @@index([userId, date])
   @@index([userId, isFixed])
   @@index([userId, competenceMonth])
+  @@unique([userId, competenceMonth, sourceExpenseId])
 }
 

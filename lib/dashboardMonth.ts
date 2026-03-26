@@ -1,6 +1,12 @@
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale/pt-BR";
 
 const YYYY_MM = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+function capitalizePt(text: string) {
+  if (!text) return text;
+  return text.charAt(0).toLocaleUpperCase("pt-BR") + text.slice(1);
+}
 
 /** Rotas onde `?month=YYYY-MM` deve ser preservado na navegação (BottomNav, etc.). */
 export const ROUTES_WITH_MONTH_SEARCH_PARAM = [
@@ -78,4 +84,33 @@ export function parseExpenseListMonthParam(
   const r = parseYearMonthListQuery(param, now);
   if ("error" in r) return r;
   return { competenceMonth: r.yearMonth };
+}
+
+/** `true` se `value` for competência `YYYY-MM` válida. */
+export function isValidCompetenceMonth(value: string): boolean {
+  return YYYY_MM.test(value);
+}
+
+/**
+ * Mês de competência imediatamente anterior a `ym` (`YYYY-MM`).
+ * Janeiro → dezembro do ano anterior.
+ */
+export function previousCompetenceMonth(ym: string): string {
+  if (!YYYY_MM.test(ym)) {
+    throw new Error("Mês inválido");
+  }
+  const [y, m] = ym.split("-").map(Number);
+  const prev = new Date(y, m - 2, 1);
+  return format(prev, "yyyy-MM");
+}
+
+/**
+ * Formata competência `YYYY-MM` como `Mês Ano` em pt-BR.
+ * Ex.: `2026-02` -> `Fevereiro 2026`.
+ */
+export function formatCompetenceMonth(ym: string): string {
+  if (!YYYY_MM.test(ym)) return ym;
+  const [y, m] = ym.split("-").map(Number);
+  const monthAnchor = new Date(y, m - 1, 1);
+  return capitalizePt(format(monthAnchor, "MMMM yyyy", { locale: ptBR }));
 }
