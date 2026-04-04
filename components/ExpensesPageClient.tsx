@@ -104,6 +104,8 @@ export function ExpensesPageClient({
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deleteSaving, setDeleteSaving] = useState(false);
 
+  const [createSaving, setCreateSaving] = useState(false);
+
   const [importingFixed, setImportingFixed] = useState(false);
   const [importFixedSuccess, setImportFixedSuccess] = useState<string | null>(
     null
@@ -313,6 +315,7 @@ export function ExpensesPageClient({
       return;
     }
 
+    setCreateSaving(true);
     try {
       const res = await fetch("/api/expenses", {
         method: "POST",
@@ -334,6 +337,8 @@ export function ExpensesPageClient({
     } catch (err) {
       console.error(err);
       setError("Erro inesperado ao criar despesa.");
+    } finally {
+      setCreateSaving(false);
     }
   }
 
@@ -427,8 +432,10 @@ export function ExpensesPageClient({
           <button
             type="submit"
             className="btn-primary md:col-span-12 md:w-auto"
+            disabled={createSaving}
+            aria-busy={createSaving}
           >
-            Adicionar despesa
+            {createSaving ? "Adicionando..." : "Adicionar despesa"}
           </button>
         </form>
 
