@@ -3,6 +3,7 @@ import {
   isValidCompetenceMonth,
   previousCompetenceMonth
 } from "@/lib/dashboardMonth";
+import { dateInputToStoredDate } from "@/lib/calendarDate";
 import {
   clampDateInputToCompetenceMonth,
   competenceMonthFromDateInput,
@@ -20,9 +21,9 @@ function normalizeDateInput(date: string | Date): string {
     }
     return ymd;
   }
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
+  const yyyy = date.getUTCFullYear();
+  const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(date.getUTCDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 }
 
@@ -129,18 +130,19 @@ export async function importFixedExpenses(
   const previousMonth = previousCompetenceMonth(currentMonth);
 
   return prisma.$transaction(async (tx) => {
-    const previousFixed = await tx.expense.findMany({
-      where: {
-        userId,
-        competenceMonth: previousMonth,
-        isFixed: true
-      }
-    });
-
-    const currentRows = await tx.expense.findMany({
-      where: { userId, competenceMonth: currentMonth },
-      select: { sourceExpenseId: true }
-    });
+    const [previousFixed, currentRows] = await Promise.all([
+      tx.expense.findMany({
+        where: {
+          userId,
+          competenceMonth: previousMonth,
+          isFixed: true
+        }
+      }),
+      tx.expense.findMany({
+        where: { userId, competenceMonth: currentMonth },
+        select: { sourceExpenseId: true }
+      })
+    ]);
 
     const rootsInTarget = new Set(
       currentRows
@@ -165,14 +167,13 @@ export async function importFixedExpenses(
       );
 
       try {
-        const [y, mo, d] = dateStr.split("-").map(Number);
         await tx.expense.create({
           data: {
             userId,
             amount: exp.amount,
             category: exp.category,
             description: exp.description,
-            date: new Date(y, mo - 1, d),
+            date: dateInputToStoredDate(dateStr),
             isFixed: true,
             dueDay: exp.dueDay,
             competenceMonth: currentMonth,

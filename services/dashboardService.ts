@@ -36,78 +36,65 @@ export async function getDashboardSummary(
   const monthStart = startOfMonth(referenceDate);
   const monthEnd = endOfMonth(referenceDate);
 
-  const [
-    incomesAgg,
-    expensesAgg,
-    fixedExpenses,
-    expensesGrouped,
-    incomesGrouped
-  ] = await Promise.all([
-      prisma.income.aggregate({
-        _sum: { amount: true },
-        where: {
-          userId,
-          date: {
-            gte: monthStart,
-            lte: monthEnd
-          }
+  const [monthExpenses, monthIncomes] = await Promise.all([
+    prisma.expense.findMany({
+      where: {
+        userId,
+        date: {
+          gte: monthStart,
+          lte: monthEnd
         }
-      }),
-      prisma.expense.aggregate({
-        _sum: { amount: true },
-        where: {
-          userId,
-          date: {
-            gte: monthStart,
-            lte: monthEnd
-          }
+      },
+      select: {
+        amount: true,
+        category: true,
+        isFixed: true,
+        dueDay: true,
+        id: true,
+        description: true,
+        competenceMonth: true
+      }
+    }),
+    prisma.income.findMany({
+      where: {
+        userId,
+        date: {
+          gte: monthStart,
+          lte: monthEnd
         }
-      }),
-      prisma.expense.findMany({
-        where: {
-          userId,
-          isFixed: true,
-          date: {
-            gte: monthStart,
-            lte: monthEnd
-          }
-        },
-        orderBy: {
-          dueDay: "asc"
-        }
-      }),
-      prisma.expense.groupBy({
-        by: ["category"],
-        _sum: {
-          amount: true
-        },
-        where: {
-          userId,
-          date: {
-            gte: monthStart,
-            lte: monthEnd
-          }
-        }
-      }),
-      prisma.income.groupBy({
-        by: ["category"],
-        _sum: {
-          amount: true
-        },
-        where: {
-          userId,
-          date: {
-            gte: monthStart,
-            lte: monthEnd
-          }
-        }
-      })
-    ]);
+      },
+      select: {
+        category: true,
+        amount: true
+      }
+    })
+  ]);
 
-  const incomesTotal = Number(incomesAgg._sum.amount ?? 0);
-  const expensesTotal = Number(expensesAgg._sum.amount ?? 0);
+  let expensesTotal = 0;
+  const expenseCategoryTotals = new Map<string, number>();
+  for (const row of monthExpenses) {
+    const amt = Number(row.amount);
+    expensesTotal += amt;
+    expenseCategoryTotals.set(
+      row.category,
+      (expenseCategoryTotals.get(row.category) ?? 0) + amt
+    );
+  }
+
+  let incomesTotal = 0;
+  const incomeCategoryTotals = new Map<string, number>();
+  for (const row of monthIncomes) {
+    const amt = Number(row.amount);
+    incomesTotal += amt;
+    incomeCategoryTotals.set(
+      row.category,
+      (incomeCategoryTotals.get(row.category) ?? 0) + amt
+    );
+  }
+
   const balance = incomesTotal - expensesTotal;
 
+  const fixedExpenses = monthExpenses.filter((e) => e.isFixed);
   const fixedExpensesTotal = fixedExpenses.reduce(
     (acc, exp) => acc + Number(exp.amount),
     0
@@ -127,15 +114,13 @@ export async function getDashboardSummary(
           return exp.dueDay >= today && exp.dueDay <= today + 7;
         });
 
-  const expensesByCategory = expensesGrouped.map((g) => ({
-    category: g.category,
-    total: Number(g._sum.amount ?? 0)
-  }));
+  const expensesByCategory = Array.from(
+    expenseCategoryTotals.entries()
+  ).map(([category, total]) => ({ category, total }));
 
-  const incomesByCategory = incomesGrouped.map((g) => ({
-    category: g.category,
-    total: Number(g._sum.amount ?? 0)
-  }));
+  const incomesByCategory = Array.from(incomeCategoryTotals.entries()).map(
+    ([category, total]) => ({ category, total })
+  );
 
   return {
     incomesTotal,
@@ -154,4 +139,3 @@ export async function getDashboardSummary(
     incomesByCategory
   };
 }
-

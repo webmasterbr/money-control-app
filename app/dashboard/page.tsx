@@ -1,7 +1,11 @@
 import { redirect } from "next/navigation";
 import { format, parse } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
-import { getCurrentUser, type CurrentUser } from "@/lib/auth";
+import {
+  getSessionUserId,
+  getUserProfile,
+  type CurrentUser
+} from "@/lib/auth";
 import { resolveDashboardMonth } from "@/lib/dashboardMonth";
 import { getDashboardSummary } from "@/services/dashboardService";
 import { DashboardMonthSelector } from "@/components/DashboardMonthSelector";
@@ -89,9 +93,8 @@ type DashboardPageProps = {
 };
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
-  const user = await getCurrentUser();
-
-  if (!user) {
+  const sessionUserId = await getSessionUserId();
+  if (!sessionUserId) {
     redirect("/login");
   }
 
@@ -100,9 +103,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const { yearMonth, referenceDate, isCurrentCalendarMonth } =
     resolveDashboardMonth(sp.month, now);
 
-  const summary = await getDashboardSummary(user.id, referenceDate, {
-    fixedListMode: isCurrentCalendarMonth ? "next7Days" : "fullMonth"
-  });
+  const [user, summary] = await Promise.all([
+    getUserProfile(sessionUserId),
+    getDashboardSummary(sessionUserId, referenceDate, {
+      fixedListMode: isCurrentCalendarMonth ? "next7Days" : "fullMonth"
+    })
+  ]);
+
+  if (!user) {
+    redirect("/login");
+  }
   const health = getFinancialHealth(summary.incomesTotal, summary.expensesTotal);
 
   const monthAnchor = parse(`${yearMonth}-01`, "yyyy-MM-dd", new Date());

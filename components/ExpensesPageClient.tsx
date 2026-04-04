@@ -9,6 +9,7 @@ import {
 } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
+import { parseApiCalendarDate } from "@/lib/calendarDate";
 import {
   ExpenseFormFields,
   categoryLabelByValue,
@@ -478,7 +479,7 @@ export function ExpensesPageClient({
                       <div className="min-w-0 flex-1">
                         <p className="text-[11px] leading-tight text-slate-500">
                           <time dateTime={item.date}>
-                            {format(new Date(item.date), "dd/MM/yyyy", {
+                            {format(parseApiCalendarDate(item.date), "dd/MM/yyyy", {
                               locale: ptBR
                             })}
                           </time>
@@ -569,7 +570,7 @@ export function ExpensesPageClient({
                         className="border-b border-slate-900 last:border-0"
                       >
                         <td className="whitespace-nowrap py-1.5 pr-2 align-top text-slate-500">
-                          {format(new Date(item.date), "dd/MM/yyyy", {
+                          {format(parseApiCalendarDate(item.date), "dd/MM/yyyy", {
                             locale: ptBR
                           })}
                         </td>
@@ -783,7 +784,7 @@ export function ExpensesPageClient({
               {pendingDeleteExpense ? (
                 <>
                   <span className="text-slate-200">
-                    {format(new Date(pendingDeleteExpense.date), "dd/MM/yyyy", {
+                    {format(parseApiCalendarDate(pendingDeleteExpense.date), "dd/MM/yyyy", {
                       locale: ptBR
                     })}{" "}
                     ·{" "}

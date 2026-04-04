@@ -51,22 +51,19 @@ export type CurrentUser = {
   createdAt: Date;
 };
 
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+/** Valida JWT da sessão; não acessa o banco. */
+export async function getSessionUserId(): Promise<string | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-
   if (!token) {
     return null;
   }
+  return verifyUserJwt(token)?.userId ?? null;
+}
 
-  const payload = verifyUserJwt(token);
-
-  if (!payload) {
-    return null;
-  }
-
+export async function getUserProfile(userId: string): Promise<CurrentUser | null> {
   const user = await prisma.user.findUnique({
-    where: { id: payload.userId },
+    where: { id: userId },
     select: {
       id: true,
       email: true,
@@ -77,6 +74,14 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   });
 
   return user as CurrentUser | null;
+}
+
+export async function getCurrentUser(): Promise<CurrentUser | null> {
+  const userId = await getSessionUserId();
+  if (!userId) {
+    return null;
+  }
+  return getUserProfile(userId);
 }
 
 export function attachAuthCookieToResponse(

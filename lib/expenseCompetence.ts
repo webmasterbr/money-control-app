@@ -1,6 +1,8 @@
+import { dateInputToStoredDate } from "@/lib/calendarDate";
+
 /**
  * Deriva YYYY-MM de competência a partir da data da despesa (campo `date`).
- * Para strings no formato yyyy-MM-dd (input HTML), usa o prefixo direto (sem fuso).
+ * Para strings no formato yyyy-MM-dd (input HTML) ou ISO (`...T...`), usa o prefixo yyyy-MM-dd.
  */
 export function competenceMonthFromDateInput(date: string | Date): string {
   if (typeof date === "string") {
@@ -8,12 +10,12 @@ export function competenceMonthFromDateInput(date: string | Date): string {
     if (/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
       return ymd.slice(0, 7);
     }
-  }
-  const d = typeof date === "string" ? new Date(date) : date;
-  if (Number.isNaN(d.getTime())) {
     throw new Error("Data inválida para competência");
   }
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  if (Number.isNaN(date.getTime())) {
+    throw new Error("Data inválida para competência");
+  }
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
 function pad2(n: number): string {
@@ -69,15 +71,10 @@ export function clampDateInputToCompetenceMonth(
 }
 
 /**
- * Converte `yyyy-MM-dd` para Date local (meia-noite local), evitando deslocamento por UTC.
+ * Converte `yyyy-MM-dd` para o instante persistido no banco (meio-dia UTC).
  */
 export function dateInputToLocalDate(dateInput: string): Date {
-  const ymd = dateInput.slice(0, 10);
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
-  if (!m) {
-    throw new Error("Data inválida para competência");
-  }
-  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return dateInputToStoredDate(dateInput);
 }
 
 /**

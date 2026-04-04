@@ -9,6 +9,7 @@ import {
 } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
+import { parseApiCalendarDate } from "@/lib/calendarDate";
 import { formatCompetenceMonth } from "@/lib/dashboardMonth";
 import { getDefaultDateForMonth } from "@/lib/expenseCompetence";
 
@@ -62,10 +63,10 @@ function incomeMenuButtonRefKey(source: "card" | "table", id: string) {
 }
 
 function incomeRecordToEditForm(item: Income) {
-  const d = new Date(item.date);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
+  const d = parseApiCalendarDate(item.date);
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
   return {
     amount: formatCurrencyInput(
       String(Math.round(Number(item.amount) * 100))
@@ -500,7 +501,7 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
                       <div className="min-w-0 flex-1">
                         <p className="text-[11px] leading-tight text-slate-500">
                           <time dateTime={item.date}>
-                            {format(new Date(item.date), "dd/MM/yyyy", {
+                            {format(parseApiCalendarDate(item.date), "dd/MM/yyyy", {
                               locale: ptBR
                             })}
                           </time>
@@ -591,7 +592,7 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
                         className="border-b border-slate-900 last:border-0"
                       >
                         <td className="whitespace-nowrap py-1.5 pr-2 align-top text-slate-500">
-                          {format(new Date(item.date), "dd/MM/yyyy", {
+                          {format(parseApiCalendarDate(item.date), "dd/MM/yyyy", {
                             locale: ptBR
                           })}
                         </td>
@@ -877,7 +878,7 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
               {pendingDeleteIncome ? (
                 <>
                   <span className="text-slate-200">
-                    {format(new Date(pendingDeleteIncome.date), "dd/MM/yyyy", {
+                    {format(parseApiCalendarDate(pendingDeleteIncome.date), "dd/MM/yyyy", {
                       locale: ptBR
                     })}{" "}
                     ·{" "}

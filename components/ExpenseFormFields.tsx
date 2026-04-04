@@ -1,5 +1,7 @@
 "use client";
 
+import { parseApiCalendarDate } from "@/lib/calendarDate";
+
 export const expenseCategories = [
   { value: "FOOD", label: "Alimentação" },
   { value: "HOUSING", label: "Moradia" },
@@ -59,10 +61,10 @@ export function expenseRecordToFormValues(expense: {
   isFixed: boolean;
   dueDay: number | null;
 }): ExpenseFormValues {
-  const d = new Date(expense.date);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
+  const d = parseApiCalendarDate(expense.date);
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
   return {
     amount: amountToCurrencyMask(expense.amount),
     category: expense.category,
