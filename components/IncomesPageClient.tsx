@@ -43,6 +43,8 @@ const incomeCategories = [
   { value: "FREELANCE", label: "Freelance" },
   { value: "BUSINESS", label: "Negócio" },
   { value: "INVESTMENTS", label: "Investimentos" },
+  { value: "CASHBACK", label: "Cashback" },
+  { value: "BENEFITS_EXTRAS", label: "Benefícios / Extras" },
   { value: "OTHER", label: "Outros" }
 ];
 

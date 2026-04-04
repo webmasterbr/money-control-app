@@ -17,6 +17,8 @@ const CATEGORY_LABEL_BY_VALUE: Record<string, string> = {
   FREELANCE: "Freelance",
   BUSINESS: "Negócio",
   INVESTMENTS: "Investimentos",
+  CASHBACK: "Cashback",
+  BENEFITS_EXTRAS: "Benefícios / Extras",
   OTHER: "Outros"
 };
 

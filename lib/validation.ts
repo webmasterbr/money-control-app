@@ -24,9 +24,19 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Senha é obrigatória")
 });
 
+const incomeCategoryEnum = z.enum([
+  "SALARY",
+  "FREELANCE",
+  "BUSINESS",
+  "INVESTMENTS",
+  "CASHBACK",
+  "BENEFITS_EXTRAS",
+  "OTHER"
+]);
+
 export const incomeSchema = z.object({
   amount: z.number().positive("Valor deve ser maior que zero"),
-  category: z.string().min(1, "Categoria é obrigatória"),
+  category: incomeCategoryEnum,
   description: z.string().optional(),
   date: z.string().or(z.date()), // será normalizado na API
   competenceMonth: z
