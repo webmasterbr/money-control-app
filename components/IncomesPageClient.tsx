@@ -106,6 +106,8 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deleteSaving, setDeleteSaving] = useState(false);
 
+  const [createSaving, setCreateSaving] = useState(false);
+
   const [incomeActionsMenu, setIncomeActionsMenu] =
     useState<IncomeActionsMenu>(null);
   const [incomeActionsMenuPos, setIncomeActionsMenuPos] = useState<{
@@ -309,6 +311,7 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
       return;
     }
 
+    setCreateSaving(true);
     try {
       const res = await fetch("/api/incomes", {
         method: "POST",
@@ -334,6 +337,8 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
     } catch (err) {
       console.error(err);
       setError("Erro inesperado ao criar receita.");
+    } finally {
+      setCreateSaving(false);
     }
   }
 
@@ -461,8 +466,10 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
           <button
             type="submit"
             className="btn-primary md:col-span-4 md:w-auto"
+            disabled={createSaving}
+            aria-busy={createSaving}
           >
-            Adicionar receita
+            {createSaving ? "Adicionando..." : "Adicionar receita"}
           </button>
         </form>
 
