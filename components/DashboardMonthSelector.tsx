@@ -81,7 +81,7 @@ export function DashboardMonthSelector({ value }: Props) {
 
         <button
           type="button"
-          className="min-w-[6.5rem] rounded-md text-center text-sm font-medium tabular-nums text-slate-100 transition-colors hover:text-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+          className="min-w-[6.5rem] rounded-md text-center text-sm font-medium tabular-nums text-slate-900 transition-colors hover:text-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:text-slate-100 dark:hover:text-primary-300 dark:focus-visible:ring-offset-slate-950"
           aria-label={`Abrir seletor de mês. Mês exibido: ${monthLabel}`}
           aria-haspopup="dialog"
           onClick={openMonthPicker}
@@ -105,7 +105,7 @@ export function DashboardMonthSelector({ value }: Props) {
           type="button"
           className={
             isViewingCurrentMonth
-              ? "inline-flex shrink-0 cursor-not-allowed items-center justify-center rounded-lg border border-slate-800 bg-transparent px-3 py-2 text-sm font-medium text-slate-500 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-600 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+              ? "inline-flex shrink-0 cursor-not-allowed items-center justify-center rounded-lg border border-slate-300 bg-transparent px-3 py-2 text-sm font-medium text-slate-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:text-slate-500 dark:focus-visible:ring-slate-600 dark:focus-visible:ring-offset-slate-950"
               : "btn-primary shrink-0 px-3 py-2 text-sm"
           }
           aria-label="Ir para o mês atual"

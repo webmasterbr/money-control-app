@@ -27,7 +27,7 @@ type Props = {
 export function ExpensesPieChart({ data }: Props) {
   if (!data.length) {
     return (
-      <div className="card flex h-64 items-center justify-center text-sm text-slate-400">
+      <div className="card flex h-64 items-center justify-center text-sm text-slate-600 dark:text-slate-400">
         Nenhuma despesa registrada neste mês.
       </div>
     );
@@ -40,7 +40,7 @@ export function ExpensesPieChart({ data }: Props) {
 
   return (
     <div className="card h-64 p-4">
-      <h2 className="mb-2 text-sm font-semibold text-slate-200">
+      <h2 className="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-200">
         Despesas por categoria
       </h2>
       <ResponsiveContainer width="100%" height="100%">
@@ -61,6 +61,13 @@ export function ExpensesPieChart({ data }: Props) {
             ))}
           </Pie>
           <Tooltip
+            contentStyle={{
+              backgroundColor: "var(--tooltip-bg)",
+              border: "1px solid var(--tooltip-border)",
+              borderRadius: "0.5rem"
+            }}
+            labelStyle={{ color: "var(--tooltip-fg)" }}
+            itemStyle={{ color: "var(--tooltip-fg)" }}
             formatter={(value) =>
               Number(value ?? 0).toLocaleString("pt-BR", {
                 style: "currency",

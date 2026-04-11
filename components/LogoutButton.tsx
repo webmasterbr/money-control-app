@@ -37,7 +37,7 @@ export function LogoutButton({ className }: LogoutButtonProps) {
       aria-label="Encerrar sessão"
       className={
         className ??
-        "text-sm text-slate-400 transition-colors hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+        "text-sm text-slate-600 transition-colors hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-400 dark:hover:text-slate-200"
       }
     >
       {loading ? "Saindo…" : "Sair"}

@@ -153,7 +153,7 @@ export function ExpenseFormFields({ idPrefix, form, setForm }: Props) {
 
       <div className="md:col-span-12">
         <label
-          className="label text-sm font-medium text-slate-100 md:text-base"
+          className="label text-sm font-medium text-slate-900 md:text-base dark:text-slate-100"
           htmlFor={pid("description")}
         >
           Descrição
@@ -171,7 +171,7 @@ export function ExpenseFormFields({ idPrefix, form, setForm }: Props) {
       </div>
 
       <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-end sm:gap-4 md:col-span-12">
-        <label className="flex items-center gap-2 text-sm text-slate-200">
+        <label className="flex items-center gap-2 text-sm text-slate-800 dark:text-slate-200">
           <input
             type="checkbox"
             checked={form.isFixed}

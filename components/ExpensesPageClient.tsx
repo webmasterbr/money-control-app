@@ -415,11 +415,13 @@ export function ExpensesPageClient({
   return (
     <div className="space-y-6">
       <section className="card p-4">
-        <h1 className="text-lg font-semibold">Despesas</h1>
-        <p className="mt-1 text-sm font-medium text-slate-300">
+        <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+          Despesas
+        </h1>
+        <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-300">
           Despesas — {competenceLabel}
         </p>
-        <p className="mt-1 text-sm text-slate-400">
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
           Registre rapidamente suas despesas, incluindo fixas.
         </p>
 
@@ -444,26 +446,30 @@ export function ExpensesPageClient({
 
       <section className="card p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-sm font-semibold text-slate-200">
+          <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
             Lista de despesas
           </h2>
           <button
             type="button"
             disabled={importingFixed}
             onClick={handleImportFixed}
-            className="inline-flex shrink-0 items-center justify-center rounded-lg border border-slate-700/80 bg-transparent px-3 py-1.5 text-xs font-medium text-slate-400 transition-colors hover:border-slate-600 hover:bg-slate-900/80 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex shrink-0 items-center justify-center rounded-lg border border-slate-300/90 bg-transparent px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-slate-400 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700/80 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-900/80 dark:hover:text-slate-200 dark:focus-visible:ring-offset-slate-950"
           >
             {importingFixed ? "Importando…" : "Importar despesas fixas"}
           </button>
         </div>
         {importFixedSuccess ? (
-          <p className="mt-2 text-xs text-slate-500">{importFixedSuccess}</p>
+          <p className="mt-2 text-xs text-slate-600 dark:text-slate-500">
+            {importFixedSuccess}
+          </p>
         ) : null}
 
         {loading ? (
-          <p className="mt-3 text-sm text-slate-400">Carregando...</p>
+          <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+            Carregando...
+          </p>
         ) : items.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-400">
+          <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
             Nenhuma despesa cadastrada.
           </p>
         ) : (
@@ -480,32 +486,32 @@ export function ExpensesPageClient({
                 return (
                   <article
                     key={item.id}
-                    className="rounded-md border border-slate-800/60 px-2.5 py-2"
+                    className="rounded-md border border-slate-200/90 px-2.5 py-2 dark:border-slate-800/60"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="text-[11px] leading-tight text-slate-500">
+                        <p className="text-[11px] leading-tight text-slate-600 dark:text-slate-500">
                           <time dateTime={item.date}>
                             {format(parseApiCalendarDate(item.date), "dd/MM/yyyy", {
                               locale: ptBR
                             })}
                           </time>
-                          <span className="text-slate-600" aria-hidden>
+                          <span className="text-slate-400 dark:text-slate-600" aria-hidden>
                             {" "}
                             ·{" "}
                           </span>
-                          <span className="font-medium text-slate-200">
+                          <span className="font-medium text-slate-800 dark:text-slate-200">
                             {categoryLabel}
                           </span>
                         </p>
                         {description ? (
-                          <p className="mt-1 text-xs leading-snug break-words text-slate-400">
+                          <p className="mt-1 text-xs leading-snug break-words text-slate-600 dark:text-slate-400">
                             {description}
                           </p>
                         ) : null}
                       </div>
                       <div className="flex shrink-0 items-center gap-0.5">
-                        <p className="text-right text-xs font-semibold tabular-nums text-rose-300">
+                        <p className="text-right text-xs font-semibold tabular-nums text-rose-600 dark:text-rose-300">
                           {Number(item.amount).toLocaleString("pt-BR", {
                             style: "currency",
                             currency: "BRL"
@@ -519,7 +525,7 @@ export function ExpensesPageClient({
                             else expenseMenuButtonRefs.current.delete(k);
                           }}
                           id={`expense-row-menu-trigger-card-${item.id}`}
-                          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-200 dark:focus-visible:ring-offset-slate-950"
                           aria-expanded={menuOpen}
                           aria-haspopup="menu"
                           aria-controls={menuDomId}
@@ -534,7 +540,7 @@ export function ExpensesPageClient({
                         >
                           <span
                             aria-hidden
-                            className="text-sm font-semibold leading-none tracking-tight text-slate-400"
+                            className="text-sm font-semibold leading-none tracking-tight text-slate-600 dark:text-slate-400"
                           >
                             ...
                           </span>
@@ -549,7 +555,7 @@ export function ExpensesPageClient({
             <div className="mt-3 hidden min-w-0 overflow-x-auto md:block">
               <table className="w-full min-w-0 table-fixed text-xs sm:text-sm">
                 <thead>
-                  <tr className="border-b border-slate-800 text-[10px] font-medium uppercase tracking-wide text-slate-500 sm:text-xs">
+                  <tr className="border-b border-slate-200 text-[10px] font-medium uppercase tracking-wide text-slate-600 dark:border-slate-800 dark:text-slate-500 sm:text-xs">
                     <th className="w-[5.25rem] py-1.5 pr-2 text-left sm:w-24">
                       Data
                     </th>
@@ -574,20 +580,20 @@ export function ExpensesPageClient({
                     return (
                       <tr
                         key={item.id}
-                        className="border-b border-slate-900 last:border-0"
+                        className="border-b border-slate-100 last:border-0 dark:border-slate-900"
                       >
-                        <td className="whitespace-nowrap py-1.5 pr-2 align-top text-slate-500">
+                        <td className="whitespace-nowrap py-1.5 pr-2 align-top text-slate-600 dark:text-slate-500">
                           {format(parseApiCalendarDate(item.date), "dd/MM/yyyy", {
                             locale: ptBR
                           })}
                         </td>
-                        <td className="break-words py-1.5 pr-2 align-top text-slate-200">
+                        <td className="break-words py-1.5 pr-2 align-top text-slate-800 dark:text-slate-200">
                           {categoryLabelByValue[item.category] ?? item.category}
                         </td>
-                        <td className="min-w-0 break-words py-1.5 pr-2 align-top leading-snug text-slate-400">
+                        <td className="min-w-0 break-words py-1.5 pr-2 align-top leading-snug text-slate-600 dark:text-slate-400">
                           {item.description || "—"}
                         </td>
-                        <td className="whitespace-nowrap py-1.5 pl-2 text-right align-top font-medium tabular-nums text-rose-300">
+                        <td className="whitespace-nowrap py-1.5 pl-2 text-right align-top font-medium tabular-nums text-rose-600 dark:text-rose-300">
                           {Number(item.amount).toLocaleString("pt-BR", {
                             style: "currency",
                             currency: "BRL"
@@ -605,7 +611,7 @@ export function ExpensesPageClient({
                               else expenseMenuButtonRefs.current.delete(k);
                             }}
                             id={`expense-row-menu-trigger-table-${item.id}`}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-200 dark:focus-visible:ring-offset-slate-950"
                             aria-expanded={menuOpen}
                             aria-haspopup="menu"
                             aria-controls={menuDomId}
@@ -620,7 +626,7 @@ export function ExpensesPageClient({
                           >
                             <span
                               aria-hidden
-                              className="text-sm font-semibold leading-none tracking-tight text-slate-400"
+                              className="text-sm font-semibold leading-none tracking-tight text-slate-600 dark:text-slate-400"
                             >
                               ...
                             </span>
@@ -642,7 +648,7 @@ export function ExpensesPageClient({
           id={`expense-row-menu-${expenseActionsMenu.id}`}
           role="menu"
           aria-labelledby={`expense-row-menu-trigger-${expenseActionsMenu.source}-${expenseActionsMenu.id}`}
-          className="fixed z-[55] min-w-[10rem] rounded-lg border border-slate-700 bg-slate-900 py-1 shadow-xl ring-1 ring-slate-800/80"
+          className="fixed z-[55] min-w-[10rem] rounded-lg border border-slate-200 bg-white py-1 shadow-xl ring-1 ring-slate-200/90 dark:border-slate-700 dark:bg-slate-900 dark:ring-slate-800/80"
           style={{
             top: expenseActionsMenuPos.top,
             left: expenseActionsMenuPos.left
@@ -656,7 +662,7 @@ export function ExpensesPageClient({
                 <button
                   type="button"
                   role="menuitem"
-                  className="flex w-full px-3 py-2 text-left text-sm text-slate-200 transition-colors hover:bg-slate-800 focus-visible:bg-slate-800 focus-visible:outline-none"
+                  className="flex w-full px-3 py-2 text-left text-sm text-slate-800 transition-colors hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none dark:text-slate-200 dark:hover:bg-slate-800 dark:focus-visible:bg-slate-800"
                   onClick={() => openEdit(row)}
                 >
                   Editar
@@ -680,7 +686,7 @@ export function ExpensesPageClient({
 
       {editingId && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/90 p-4 backdrop-blur-sm sm:items-center"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 backdrop-blur-sm dark:bg-slate-950/90 sm:items-center"
           role="presentation"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) closeEdit();
@@ -690,19 +696,19 @@ export function ExpensesPageClient({
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
-            className="max-h-[min(90vh,720px)] w-full max-w-lg overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl ring-1 ring-slate-800/80"
+            className="max-h-[min(90vh,720px)] w-full max-w-lg overflow-y-auto rounded-xl border border-slate-200 bg-white p-5 shadow-2xl ring-1 ring-slate-200/90 dark:border-slate-700 dark:bg-slate-900 dark:ring-slate-800/80"
             onMouseDown={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-start justify-between gap-3">
               <h2
                 id={titleId}
-                className="text-base font-semibold text-slate-100"
+                className="text-base font-semibold text-slate-900 dark:text-slate-100"
               >
                 Editar despesa
               </h2>
               <button
                 type="button"
-                className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+                className="rounded-lg p-1 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                 aria-label="Fechar"
                 onClick={closeEdit}
               >
@@ -762,7 +768,7 @@ export function ExpensesPageClient({
 
       {deleteConfirmId && !editingId && (
         <div
-          className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-950/90 p-4 backdrop-blur-sm sm:items-center"
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-900/40 p-4 backdrop-blur-sm dark:bg-slate-950/90 sm:items-center"
           role="presentation"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget && !deleteSaving) {
@@ -775,22 +781,22 @@ export function ExpensesPageClient({
             aria-modal="true"
             aria-labelledby={deleteDialogTitleId}
             aria-describedby="delete-expense-dialog-desc"
-            className="w-full max-w-sm rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl ring-1 ring-slate-800/80"
+            className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-2xl ring-1 ring-slate-200/90 dark:border-slate-700 dark:bg-slate-900 dark:ring-slate-800/80"
             onMouseDown={(e) => e.stopPropagation()}
           >
             <h2
               id={deleteDialogTitleId}
-              className="text-base font-semibold text-slate-100"
+              className="text-base font-semibold text-slate-900 dark:text-slate-100"
             >
               Excluir despesa?
             </h2>
             <p
               id="delete-expense-dialog-desc"
-              className="mt-2 text-sm leading-relaxed text-slate-400"
+              className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400"
             >
               {pendingDeleteExpense ? (
                 <>
-                  <span className="text-slate-200">
+                  <span className="text-slate-800 dark:text-slate-200">
                     {format(parseApiCalendarDate(pendingDeleteExpense.date), "dd/MM/yyyy", {
                       locale: ptBR
                     })}{" "}
@@ -817,7 +823,7 @@ export function ExpensesPageClient({
               </button>
               <button
                 type="button"
-                className="w-full rounded-lg border border-rose-600/70 bg-transparent px-4 py-2 text-sm font-medium text-rose-400 transition-colors hover:bg-rose-950/40 hover:text-rose-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                className="w-full rounded-lg border border-rose-600/70 bg-transparent px-4 py-2 text-sm font-medium text-rose-400 transition-colors hover:bg-rose-950/40 hover:text-rose-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                 disabled={deleteSaving}
                 onClick={confirmDeleteExpense}
               >

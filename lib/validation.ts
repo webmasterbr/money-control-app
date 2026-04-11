@@ -24,6 +24,18 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Senha é obrigatória")
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("E-mail inválido")
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, "Token inválido"),
+  newPassword: z
+    .string()
+    .min(6, "Senha deve ter pelo menos 6 caracteres")
+    .max(100, "Senha muito longa")
+});
+
 const incomeCategoryEnum = z.enum([
   "SALARY",
   "FREELANCE",
@@ -83,6 +95,8 @@ export const importFixedExpensesSchema = z.object({
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type IncomeInput = z.infer<typeof incomeSchema>;
 export type ExpenseInput = z.infer<typeof expenseSchema>;
 

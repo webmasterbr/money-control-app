@@ -43,7 +43,7 @@ function getFinancialHealth(
         title: "Sem base",
         detail:
           "Cadastre receitas no mês para acompanhar o uso em relação à sua renda.",
-        accentClass: "text-slate-400"
+        accentClass: "text-slate-600 dark:text-slate-400"
       };
     }
     return {
@@ -51,7 +51,7 @@ function getFinancialHealth(
       title: "Crítico",
       detail:
         "Há despesas no mês, mas nenhuma receita registrada. Revise seu planejamento.",
-      accentClass: "text-rose-400"
+        accentClass: "text-rose-600 dark:text-rose-400"
     };
   }
 
@@ -62,7 +62,7 @@ function getFinancialHealth(
       emoji: "🟢",
       title: "Saudável",
       detail: `Despesas em relação à receita: ${ratioPercent.toFixed(1)}% (abaixo de 50%).`,
-      accentClass: "text-emerald-400"
+      accentClass: "text-emerald-600 dark:text-emerald-400"
     };
   }
 
@@ -71,7 +71,7 @@ function getFinancialHealth(
       emoji: "🟡",
       title: "Atenção",
       detail: `Despesas em relação à receita: ${ratioPercent.toFixed(1)}% (entre 50% e 80%).`,
-      accentClass: "text-amber-400"
+      accentClass: "text-amber-600 dark:text-amber-400"
     };
   }
 
@@ -79,7 +79,7 @@ function getFinancialHealth(
     emoji: "🔴",
     title: "Crítico",
     detail: `Despesas em relação à receita: ${ratioPercent.toFixed(1)}% (acima de 80%).`,
-    accentClass: "text-rose-400"
+        accentClass: "text-rose-600 dark:text-rose-400"
   };
 }
 
@@ -132,11 +132,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     <div className="space-y-6">
       <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
             Olá,{" "}
-            <span className="text-primary-400">{userDisplayName(user)}</span>
+            <span className="text-primary-600 dark:text-primary-400">
+              {userDisplayName(user)}
+            </span>
           </h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
             {isCurrentCalendarMonth
               ? "Visão geral das suas finanças neste mês."
               : `Visão geral de ${monthLabel}.`}
@@ -148,30 +150,32 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       <section className="space-y-4">
         <div className="grid gap-4 md:grid-cols-3">
           <div className="card p-4">
-            <h2 className="text-xs font-medium uppercase text-slate-400">
+            <h2 className="text-xs font-medium uppercase text-slate-600 dark:text-slate-400">
               Receitas no mês
             </h2>
-            <p className="mt-2 text-2xl font-semibold text-emerald-400">
+            <p className="mt-2 text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
               {formatCurrency(summary.incomesTotal)}
             </p>
           </div>
 
           <div className="card p-4">
-            <h2 className="text-xs font-medium uppercase text-slate-400">
+            <h2 className="text-xs font-medium uppercase text-slate-600 dark:text-slate-400">
               Despesas no mês
             </h2>
-            <p className="mt-2 text-2xl font-semibold text-rose-400">
+            <p className="mt-2 text-2xl font-semibold text-rose-600 dark:text-rose-400">
               {formatCurrency(summary.expensesTotal)}
             </p>
           </div>
 
           <div className="card p-4">
-            <h2 className="text-xs font-medium uppercase text-slate-400">
+            <h2 className="text-xs font-medium uppercase text-slate-600 dark:text-slate-400">
               Saldo restante
             </h2>
             <p
               className={`mt-2 text-2xl font-semibold ${
-                summary.balance >= 0 ? "text-emerald-400" : "text-rose-400"
+                summary.balance >= 0
+                  ? "text-emerald-600 dark:text-emerald-400"
+                  : "text-rose-600 dark:text-rose-400"
               }`}
             >
               {formatCurrency(summary.balance)}
@@ -180,7 +184,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </div>
 
         <div className="card p-4">
-          <h2 className="text-xs font-medium uppercase text-slate-400">
+          <h2 className="text-xs font-medium uppercase text-slate-600 dark:text-slate-400">
             Situação do mês
           </h2>
           <p
@@ -191,10 +195,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </span>
             <span>{health.title}</span>
           </p>
-          <p className="mt-2 text-xs leading-relaxed text-slate-400">
+          <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
             {health.detail}
           </p>
-          <p className="mt-3 text-[11px] leading-snug text-slate-500">
+          <p className="mt-3 text-[11px] leading-snug text-slate-500 dark:text-slate-500">
             Referência: 🟢 Saudável (&lt; 50%) · 🟡 Atenção (50–80%) · 🔴 Crítico
             (&gt; 80%) da receita em despesas.
           </p>
@@ -203,39 +207,41 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
       <section className="grid gap-4 md:grid-cols-3">
         <div className="card p-4 md:col-span-2">
-          <h2 className="mb-2 text-sm font-semibold text-slate-200">
+          <h2 className="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-200">
             Despesas fixas
           </h2>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-600 dark:text-slate-400">
             Total de despesas fixas neste mês:
           </p>
-          <p className="mt-1 text-xl font-semibold text-slate-100">
+          <p className="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">
             {formatCurrency(summary.fixedExpensesTotal)}
           </p>
 
-          <h3 className="mt-4 text-xs font-medium uppercase text-slate-400">
+          <h3 className="mt-4 text-xs font-medium uppercase text-slate-600 dark:text-slate-400">
             {fixedSubsectionTitle}
           </h3>
           {summary.upcomingFixedExpenses.length === 0 ? (
-            <p className="mt-2 text-sm text-slate-500">{fixedListEmptyMessage}</p>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-500">
+              {fixedListEmptyMessage}
+            </p>
           ) : (
             <ul className="mt-2 space-y-1 text-sm">
               {summary.upcomingFixedExpenses.map((exp) => (
                 <li
                   key={exp.id}
-                  className="flex items-center justify-between rounded-md bg-slate-900/60 px-3 py-2"
+                  className="flex items-center justify-between rounded-md bg-slate-100 px-3 py-2 dark:bg-slate-900/60"
                 >
                   <div>
-                    <p className="font-medium text-slate-100">
+                    <p className="font-medium text-slate-900 dark:text-slate-100">
                       {exp.description || exp.category}
                     </p>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">
                       {exp.dueDay != null
                         ? `Vencimento dia ${exp.dueDay} (${exp.competenceMonth})`
                         : `Sem dia de vencimento (${exp.competenceMonth})`}
                     </p>
                   </div>
-                  <span className="text-sm font-semibold text-rose-300">
+                  <span className="text-sm font-semibold text-rose-600 dark:text-rose-300">
                     {formatCurrency(exp.amount)}
                   </span>
                 </li>

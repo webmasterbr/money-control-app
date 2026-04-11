@@ -26,6 +26,10 @@ export function AuthForm({ mode }: Props) {
     ? `/register${from ? `?from=${encodeURIComponent(from)}` : ""}`
     : `/login${from ? `?from=${encodeURIComponent(from)}` : ""}`;
 
+  const forgotPasswordHref = `/forgot-password${
+    from ? `?from=${encodeURIComponent(from)}` : ""
+  }`;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -64,10 +68,10 @@ export function AuthForm({ mode }: Props) {
   return (
     <div className="mx-auto mt-10 max-w-md">
       <div className="card p-6">
-        <h1 className="text-lg font-semibold">
+        <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
           {isLogin ? "Entrar" : "Criar conta"}
         </h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
           {isLogin
             ? "Acesse seu painel financeiro."
             : "Crie uma conta para controlar suas finanças."}
@@ -128,9 +132,22 @@ export function AuthForm({ mode }: Props) {
           </div>
 
           <div>
-            <label className="label" htmlFor="password">
-              Senha
-            </label>
+            <div className="flex items-center justify-between gap-2">
+              <label className="label mb-0" htmlFor="password">
+                Senha
+              </label>
+              {isLogin && (
+                <Link
+                  href={forgotPasswordHref}
+                  className="text-sm font-medium text-slate-600 dark:text-slate-400"
+                  onClick={(e) => {
+                    if (loading) e.preventDefault();
+                  }}
+                >
+                  Esqueci minha senha
+                </Link>
+              )}
+            </div>
             <input
               id="password"
               type="password"
@@ -158,7 +175,7 @@ export function AuthForm({ mode }: Props) {
               : "Criar conta"}
           </button>
 
-          <p className="text-center text-sm text-slate-400">
+          <p className="text-center text-sm text-slate-600 dark:text-slate-400">
             {isLogin ? "Ainda não tem cadastro?" : "Já possui cadastro?"}{" "}
             <Link
               href={authToggleHref}

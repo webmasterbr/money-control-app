@@ -1,4 +1,4 @@
-# Money Control App
+# Saldo Certo App
 
 Aplicação web minimalista para **gerenciamento de finanças pessoais**, construída com foco em simplicidade, clareza e possibilidade de evolução futura.
 
@@ -40,6 +40,17 @@ Relacionamentos:
 
 - `incomes` – receitas do usuário
 - `expenses` – despesas do usuário
+
+### PasswordResetToken
+
+- `id` (cuid, PK)
+- `email` (string; corresponde ao e-mail do `User` no momento da solicitação)
+- `token` (string única; valor gerado com `crypto.randomBytes`, válido por **1 hora** no fluxo atual)
+- `expiresAt`, `createdAt`
+
+Índice:
+
+- `@@index([email])` – facilita invalidar tokens anteriores ao solicitar um novo reset para o mesmo e-mail.
 
 ### Income
 
@@ -102,6 +113,12 @@ Arquivos principais:
 - `components/LogoutButton.tsx` – encerra sessão (`POST /api/logout`); usado no menu Config.
 - `app/profile/page.tsx` – página **Perfil** (nome, e-mail, data de cadastro).
 - `app/api/auth/me/route.ts` – retorna dados do usuário autenticado
+- `app/api/auth/forgot-password/route.ts` – solicita reset (`POST`); resposta sempre `{ success: true }` para não revelar se o e-mail existe
+- `app/api/auth/reset-password/route.ts` – redefine senha com `token` + `newPassword` (`POST`)
+- `lib/mail.ts` – envio do e-mail de reset via **nodemailer** (SMTP)
+- `lib/passwordResetToken.ts` – geração do token e URL base (`APP_URL`)
+- `app/forgot-password/page.tsx` – formulário “esqueci minha senha”
+- `app/reset-password/page.tsx` – validação do token (server) e formulário de nova senha
 - `middleware.ts` – protege rotas `/dashboard`, `/incomes`, `/expenses`, `/profile` redirecionando para `/login` caso não haja sessão
 
 Fluxo resumido:
@@ -307,7 +324,21 @@ Crie um arquivo `.env` na raiz com base em `.env.example`:
 ```env
 DATABASE_URL="postgresql://money:money_password@localhost:5432/money_control_app?schema=public"
 JWT_SECRET="uma_chave_bem_secreta_aqui"
+
+# Recuperação de senha (e-mail)
+APP_URL="http://localhost:3000"
+MAIL_FROM="Saldo Certo <noreply@exemplo.com>"
+SMTP_HOST="smtp.exemplo.com"
+SMTP_PORT="587"
+SMTP_USER="usuario_smtp"
+SMTP_PASS="senha_smtp"
 ```
+
+- **`APP_URL`**: origem pública da aplicação, **sem barra no final**; usada no link `.../reset-password?token=...`. Em **desenvolvimento**, se omitido, usa `http://localhost:` + variável `PORT` ou `3000`. Em **produção**, defina `APP_URL` ou use deploy na Vercel (`VERCEL_URL` é usado automaticamente).
+- **`MAIL_FROM`**: remetente (ex.: `Saldo Certo <noreply@seudominio.com>`). Em **desenvolvimento**, se omitido, o app usa `Saldo Certo <noreply@localhost>`.
+- **`SMTP_HOST`**, **`SMTP_PORT`**: obrigatórios em **produção**. Em **desenvolvimento**, se omitidos, o app usa `localhost` e porta **1025** (padrão do [Mailpit](https://mailpit.axllent.org/); suba o Mailpit ou ajuste `SMTP_*` se usar outra porta).
+- **`SMTP_USER`** / **`SMTP_PASS`**: preencha os dois para servidores com autenticação; para SMTP local **sem login** (ex.: Mailpit, MailHog), deixe **os dois vazios**.
+- Se algo estiver incorreto, a API de “esqueci minha senha” ainda responde com sucesso (por segurança), mas o e-mail não será enviado — o log do servidor mostra o motivo (ex.: variável ausente, falha de conexão, `EAUTH`).
 
 Ajuste usuário/senha/host conforme o seu `docker-compose.yml` ou ambiente de banco.
 
@@ -324,7 +355,7 @@ npm run prisma:generate
 npm run prisma:migrate
 ```
 
-Isso vai criar as tabelas `User`, `Income` e `Expense` no banco configurado.
+Isso vai criar as tabelas do schema (incluindo `User`, `PasswordResetToken`, `Income` e `Expense`) no banco configurado.
 
 ### 6. Prisma Studio (visualizar e editar dados)
 
@@ -375,7 +406,7 @@ npm run start
 
 Certifique-se em produção de:
 
-- Definir corretamente as variáveis de ambiente (`DATABASE_URL`, `JWT_SECRET`).
+- Definir corretamente as variáveis de ambiente (`DATABASE_URL`, `JWT_SECRET`, `APP_URL` e SMTP para recuperação de senha).
 - Usar HTTPS para beneficiar-se do cookie `secure` (ativado automaticamente em `NODE_ENV=production`).
 - Ter um banco PostgreSQL acessível pela aplicação.
 

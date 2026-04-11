@@ -46,7 +46,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-800 bg-slate-950/95 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-md"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/95"
       aria-label="Navegação principal"
     >
       <div className="mx-auto grid max-w-5xl grid-cols-4 gap-1 px-2 py-2">
@@ -59,10 +59,10 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={hrefWithMonth(item.href)}
-              className={`flex flex-col items-center justify-center gap-0.5 rounded-lg py-2 text-[0.65rem] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
+              className={`flex flex-col items-center justify-center gap-0.5 rounded-lg py-2 text-[0.65rem] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 ${
                 active
-                  ? "text-primary-400"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? "text-primary-600 dark:text-primary-400"
+                  : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
               }`}
             >
               <span className="text-lg leading-none" aria-hidden>
@@ -76,10 +76,12 @@ export function BottomNav() {
         <div className="relative flex justify-center" ref={configRef}>
           <button
             type="button"
-            className={`flex w-full max-w-[5rem] flex-col items-center justify-center gap-0.5 rounded-lg py-2 text-[0.65rem] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
-              pathname.startsWith("/profile") || configOpen
-                ? "text-primary-400"
-                : "text-slate-400 hover:text-slate-200"
+            className={`flex w-full max-w-[5rem] flex-col items-center justify-center gap-0.5 rounded-lg py-2 text-[0.65rem] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 ${
+              pathname.startsWith("/profile") ||
+              pathname.startsWith("/settings") ||
+              configOpen
+                ? "text-primary-600 dark:text-primary-400"
+                : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
             aria-expanded={configOpen}
             aria-haspopup="menu"
@@ -95,18 +97,26 @@ export function BottomNav() {
           {configOpen ? (
             <div
               role="menu"
-              className="absolute bottom-full right-0 mb-2 w-48 rounded-xl border border-slate-800 bg-slate-900 py-1 shadow-xl ring-1 ring-slate-800/80"
+              className="absolute bottom-full right-0 mb-2 w-48 rounded-xl border border-slate-200 bg-white py-1 shadow-xl ring-1 ring-slate-200/80 dark:border-slate-800 dark:bg-slate-900 dark:ring-slate-800/80"
             >
               <Link
                 role="menuitem"
+                href="/settings"
+                className="block px-4 py-3 text-sm text-slate-800 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+                onClick={() => setConfigOpen(false)}
+              >
+                Configurações
+              </Link>
+              <Link
+                role="menuitem"
                 href="/profile"
-                className="block px-4 py-3 text-sm text-slate-200 hover:bg-slate-800"
+                className="block px-4 py-3 text-sm text-slate-800 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
                 onClick={() => setConfigOpen(false)}
               >
                 Perfil
               </Link>
-              <div className="border-t border-slate-800 px-2 py-1">
-                <LogoutButton className="w-full rounded-md px-2 py-2 text-left text-sm text-rose-400 transition-colors hover:bg-slate-800 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50" />
+              <div className="border-t border-slate-200 px-2 py-1 dark:border-slate-800">
+                <LogoutButton className="w-full rounded-md px-2 py-2 text-left text-sm text-rose-600 transition-colors hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-rose-400 dark:hover:bg-slate-800 dark:hover:text-rose-300" />
               </div>
             </div>
           ) : null}
