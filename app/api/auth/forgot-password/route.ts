@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendPasswordResetEmail } from "@/lib/mail";
+import { sendPasswordResetEmail } from "@/lib/email/password-reset-mail";
 import {
   createPasswordResetTokenValue,
   getPasswordResetExpiresAt

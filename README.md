@@ -16,7 +16,7 @@ Estrutura principal de pastas:
 
 - `app/` – páginas, rotas de API (App Router) e layout
 - `components/` – componentes de UI reutilizáveis (client e server components)
-- `lib/` – helpers de infraestrutura (Prisma, auth, validações, mês do dashboard)
+- `lib/` – helpers de infraestrutura (Prisma, auth, e-mail via Resend, validações, mês do dashboard)
 - `lib/hooks/` – hooks de cliente (ex.: `useDashboardMonth`)
 - `services/` – lógica de negócio (incomes, expenses, dashboard)
 - `prisma/` – schema e migrações do Prisma
@@ -115,7 +115,8 @@ Arquivos principais:
 - `app/api/auth/me/route.ts` – retorna dados do usuário autenticado
 - `app/api/auth/forgot-password/route.ts` – solicita reset (`POST`); resposta sempre `{ success: true }` para não revelar se o e-mail existe
 - `app/api/auth/reset-password/route.ts` – redefine senha com `token` + `newPassword` (`POST`)
-- `lib/mail.ts` – envio do e-mail de reset via **nodemailer** (SMTP)
+- `lib/email/email-service.ts` – envio genérico via **Resend** (`sendEmail`)
+- `lib/email/password-reset-mail.ts` – e-mail de redefinição de senha (HTML + link)
 - `lib/passwordResetToken.ts` – geração do token e URL base (`APP_URL`)
 - `app/forgot-password/page.tsx` – formulário “esqueci minha senha”
 - `app/reset-password/page.tsx` – validação do token (server) e formulário de nova senha
@@ -319,28 +320,29 @@ docker compose up -d
 
 ### 3. Configurar variáveis de ambiente
 
-Crie um arquivo `.env` na raiz com base em `.env.example`:
+Crie um arquivo `.env` na raiz (não versionado) com pelo menos:
 
 ```env
 DATABASE_URL="postgresql://money:money_password@localhost:5432/money_control_app?schema=public"
 JWT_SECRET="uma_chave_bem_secreta_aqui"
 
-# Recuperação de senha (e-mail)
+# Recuperação de senha (e-mail via Resend)
 APP_URL="http://localhost:3000"
-MAIL_FROM="Saldo Certo <noreply@exemplo.com>"
-SMTP_HOST="smtp.exemplo.com"
-SMTP_PORT="587"
-SMTP_USER="usuario_smtp"
-SMTP_PASS="senha_smtp"
+MAIL_FROM="Saldo Certo <onboarding@resend.dev>"
+RESEND_API_KEY="re_xxxxxxxx"
 ```
 
-- **`APP_URL`**: origem pública da aplicação, **sem barra no final**; usada no link `.../reset-password?token=...`. Em **desenvolvimento**, se omitido, usa `http://localhost:` + variável `PORT` ou `3000`. Em **produção**, defina `APP_URL` ou use deploy na Vercel (`VERCEL_URL` é usado automaticamente).
-- **`MAIL_FROM`**: remetente (ex.: `Saldo Certo <noreply@seudominio.com>`). Em **desenvolvimento**, se omitido, o app usa `Saldo Certo <noreply@localhost>`.
-- **`SMTP_HOST`**, **`SMTP_PORT`**: obrigatórios em **produção**. Em **desenvolvimento**, se omitidos, o app usa `localhost` e porta **1025** (padrão do [Mailpit](https://mailpit.axllent.org/); suba o Mailpit ou ajuste `SMTP_*` se usar outra porta).
-- **`SMTP_USER`** / **`SMTP_PASS`**: preencha os dois para servidores com autenticação; para SMTP local **sem login** (ex.: Mailpit, MailHog), deixe **os dois vazios**.
-- Se algo estiver incorreto, a API de “esqueci minha senha” ainda responde com sucesso (por segurança), mas o e-mail não será enviado — o log do servidor mostra o motivo (ex.: variável ausente, falha de conexão, `EAUTH`).
+- **`APP_URL`**: origem pública da aplicação, **sem barra no final**; usada no link `.../reset-password?token=...`. Em **desenvolvimento**, se omitido, usa `http://localhost:` + variável `PORT` ou `3000`. Em **produção**, defina `APP_URL` (recomendado) ou use deploy na Vercel (`VERCEL_URL` é usado automaticamente em [`getAppBaseUrl`](lib/passwordResetToken.ts)).
+- **`MAIL_FROM`**: remetente exibido no e-mail. Deve ser um **endereço verificado** no painel da [Resend](https://resend.com) (domínio próprio) ou, para testes iniciais, o remetente de testes indicado na documentação da Resend (ex.: `onboarding@resend.dev` quando aplicável).
+- **`RESEND_API_KEY`**: chave de API da Resend. **Obrigatória** para enviar e-mails (local e produção). Sem ela, a rota de “esqueci minha senha” continua respondendo `{ success: true }`, mas o e-mail não é enviado e o servidor registra o erro.
+- Não há SMTP local nem Nodemailer: todo envio passa pela API da Resend.
+- Se algo estiver incorreto na configuração ou na API, a API de “esqueci minha senha” ainda responde com sucesso (por segurança), mas o e-mail pode não ser enviado — veja os logs do servidor.
 
-Ajuste usuário/senha/host conforme o seu `docker-compose.yml` ou ambiente de banco.
+Ajuste `DATABASE_URL` conforme o seu `docker-compose.yml` ou ambiente de banco.
+
+#### Produção (ex.: Vercel)
+
+No painel do projeto, em **Settings → Environment Variables**, defina pelo menos: `DATABASE_URL`, `JWT_SECRET`, `APP_URL` (URL pública do app), `MAIL_FROM`, `RESEND_API_KEY`. Use o mesmo `MAIL_FROM` verificado na Resend e uma API key com permissão de envio.
 
 ### 4. Instalar dependências
 
@@ -406,7 +408,7 @@ npm run start
 
 Certifique-se em produção de:
 
-- Definir corretamente as variáveis de ambiente (`DATABASE_URL`, `JWT_SECRET`, `APP_URL` e SMTP para recuperação de senha).
+- Definir corretamente as variáveis de ambiente (`DATABASE_URL`, `JWT_SECRET`, `APP_URL`, `MAIL_FROM`, `RESEND_API_KEY` para recuperação de senha).
 - Usar HTTPS para beneficiar-se do cookie `secure` (ativado automaticamente em `NODE_ENV=production`).
 - Ter um banco PostgreSQL acessível pela aplicação.
 
