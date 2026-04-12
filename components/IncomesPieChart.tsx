@@ -1,5 +1,6 @@
-"use client";
+﻿"use client";
 
+import { getIncomeCategoryLabel } from "@/lib/incomeCategories";
 import { Pie, PieChart, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 const COLORS = [
@@ -11,16 +12,6 @@ const COLORS = [
   "#8b5cf6",
   "#14b8a6"
 ];
-
-const CATEGORY_LABEL_BY_VALUE: Record<string, string> = {
-  SALARY: "Salário",
-  FREELANCE: "Freelance",
-  BUSINESS: "Negócio",
-  INVESTMENTS: "Investimentos",
-  CASHBACK: "Cashback",
-  BENEFITS_EXTRAS: "Benefícios / Extras",
-  OTHER: "Outros"
-};
 
 export type IncomesPieDatum = {
   category: string;
@@ -42,7 +33,7 @@ export function IncomesPieChart({ data }: Props) {
 
   const chartData = data.map((item) => ({
     ...item,
-    categoryLabel: CATEGORY_LABEL_BY_VALUE[item.category] ?? item.category
+    categoryLabel: getIncomeCategoryLabel(item.category)
   }));
 
   return (

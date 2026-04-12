@@ -26,7 +26,7 @@ export default async function ProfilePage() {
           Perfil
         </h1>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-          Dados da sua conta no Saldo Certo.
+          Dados da sua conta no Click Saldo.
         </p>
       </section>
 

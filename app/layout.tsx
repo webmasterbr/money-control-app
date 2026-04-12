@@ -3,14 +3,16 @@ import Link from "next/link";
 import Script from "next/script";
 import { Suspense } from "react";
 import { BottomNav } from "@/components/BottomNav";
+import { BrandLogoLink } from "@/components/BrandLogoLink";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { getCurrentUser } from "@/lib/auth";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Saldo Certo",
-  description: "Controle simples e poderoso das suas finanças pessoais."
+  title: "Click Saldo",
+  description:
+    "Click Saldo — controle simples e poderoso das suas finanças pessoais."
 };
 
 export default async function RootLayout({
@@ -35,12 +37,10 @@ export default async function RootLayout({
             }`}
           >
             <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <Link
+              <BrandLogoLink
                 href={user ? "/dashboard" : "/"}
-                className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-50"
-              >
-                Saldo <span className="text-primary-600 dark:text-primary-400">Certo</span>
-              </Link>
+                className="inline-flex min-h-[44px] min-w-[44px] items-center py-1.5 pl-1 pr-2 -my-0.5 -ml-1 shrink-0"
+              />
               {!user ? (
                 <nav className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
                   <Link href="/login" className="hover:text-primary-600 dark:hover:text-primary-300">
@@ -57,7 +57,7 @@ export default async function RootLayout({
             </header>
             <main className="flex-1">{children}</main>
             <footer className="mt-6 text-xs text-slate-500 dark:text-slate-500">
-              &copy; {new Date().getFullYear()} Saldo Certo
+              &copy; {new Date().getFullYear()} Click Saldo
             </footer>
             {user ? (
               <Suspense fallback={null}>

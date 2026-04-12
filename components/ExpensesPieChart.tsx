@@ -1,6 +1,6 @@
 "use client";
 
-import { categoryLabelByValue } from "@/components/ExpenseFormFields";
+import { getExpenseCategoryLabel } from "@/lib/categories";
 import { Pie, PieChart, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 const COLORS = [
@@ -35,7 +35,7 @@ export function ExpensesPieChart({ data }: Props) {
 
   const chartData = data.map((item) => ({
     ...item,
-    categoryLabel: categoryLabelByValue[item.category] ?? item.category
+    categoryLabel: getExpenseCategoryLabel(item.category)
   }));
 
   return (

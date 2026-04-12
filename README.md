@@ -1,4 +1,4 @@
-# Saldo Certo App
+# Click Saldo App
 
 Aplicação web minimalista para **gerenciamento de finanças pessoais**, construída com foco em simplicidade, clareza e possibilidade de evolução futura.
 
@@ -11,12 +11,13 @@ Aplicação web minimalista para **gerenciamento de finanças pessoais**, constr
 - **ORM**: Prisma
 - **Validação**: Zod (schemas em `lib/validation.ts`)
 - **Autenticação**: JWT com cookies HttpOnly
+- **Ícones (UI)**: Lucide (`lucide-react`) — categorias de receitas e despesas
 
 Estrutura principal de pastas:
 
 - `app/` – páginas, rotas de API (App Router) e layout
 - `components/` – componentes de UI reutilizáveis (client e server components)
-- `lib/` – helpers de infraestrutura (Prisma, auth, e-mail via Resend, validações, mês do dashboard)
+- `lib/` – helpers de infraestrutura (Prisma, auth, e-mail via Resend, validações, mês do dashboard, **tema**, **categorias**)
 - `lib/hooks/` – hooks de cliente (ex.: `useDashboardMonth`)
 - `services/` – lógica de negócio (incomes, expenses, dashboard)
 - `prisma/` – schema e migrações do Prisma
@@ -57,7 +58,7 @@ Relacionamentos:
 - `id` (UUID, PK)
 - `userId` (FK → User)
 - `amount` (Decimal(12,2))
-- `category` (string)
+- `category` (string — ID da categoria; valores e rótulos em `lib/incomeCategories.ts`, validação Zod na API)
 - `description` (string opcional)
 - `date` (DateTime)
 - `createdAt`
@@ -71,7 +72,7 @@ Relacionamentos:
 - `id` (UUID, PK)
 - `userId` (FK → User)
 - `amount` (Decimal(12,2))
-- `category` (string)
+- `category` (string — ID da categoria; valores e rótulos em `lib/categories.ts`, validação Zod na API)
 - `description` (string opcional)
 - `date` (DateTime)
 - `isFixed` (boolean, default `false`)
@@ -108,7 +109,7 @@ Arquivos principais:
 - `app/api/auth/register/route.ts` – cria usuário, valida dados, faz hash da senha, seta cookie de sessão
 - `app/api/auth/login/route.ts` – autentica credenciais, gera JWT e seta cookie
 - `app/api/auth/logout/route.ts` – limpa cookie de sessão (`POST`)
-- `components/BottomNav.tsx` – navegação inferior (logado): Dashboard, Receitas, Despesas, **Config** (menu com **Perfil** e **Sair** via `LogoutButton`). Os links Dashboard / Receitas / Despesas preservam **`?month=YYYY-MM`** quando esse parâmetro é válido na URL (via `useDashboardMonth`).
+- `components/BottomNav.tsx` – navegação inferior (logado): Dashboard, Receitas, Despesas, **Config** (menu com **Configurações** (`/settings`), **Perfil** e **Sair** via `LogoutButton`). Os links Dashboard / Receitas / Despesas preservam **`?month=YYYY-MM`** quando esse parâmetro é válido na URL (via `useDashboardMonth`).
 - `app/layout.tsx` – envolve `BottomNav` em `<Suspense>` (requisito do `useSearchParams` no hook acima).
 - `components/LogoutButton.tsx` – encerra sessão (`POST /api/logout`); usado no menu Config.
 - `app/profile/page.tsx` – página **Perfil** (nome, e-mail, data de cadastro).
@@ -157,8 +158,8 @@ UI:
 - Componente: `components/IncomesPageClient.tsx` (Client Component)
   - Carrega dados com `GET /api/incomes?month=...` alinhado ao mês da página.
   - Formulário simples para criar receita:
-    - `amount`, `category`, `date`, `description`.
-  - Lista em tabela responsiva com formatação de valor em BRL.
+    - `amount`, **`category`** (seletor customizado com ícone + rótulo; IDs definidos em `lib/incomeCategories.ts`), `date`, `description`.
+  - Lista em tabela responsiva com formatação de valor em BRL; **categoria** exibida com o mesmo padrão visual (ícone + nome).
   - Ação de exclusão rápida de receita.
 
 ### 3. Despesas (Expenses)
@@ -188,11 +189,11 @@ UI:
   - Carrega lista com `GET /api/expenses?month=...` coerente com o mês da página; após criar/editar/excluir, recarrega com o mesmo mês.
   - Botão minimalista **Importar despesas fixas** (ao lado do título da lista): `POST /api/expenses/import-fixed` com `{ month: listCompetenceMonth }`, feedback com contagem importada/ignorada e nova carga da lista. `sourceExpenseId` **não** é exibido na UI.
   - Formulário focado em **registro rápido** (campos reutilizados em modal de edição):
-    - `amount`, `category`, `description`, `date`; `competenceMonth` é calculada no backend a partir da data (`lib/expenseCompetence.ts`).
-    - `isFixed` (checkbox) e `dueDay`: **obrigatório (1–31)** quando fixa (HTML5 `required`, validação no cliente e nas APIs).
-  - Campos compartilhados: `components/ExpenseFormFields.tsx`.
+    - `amount`, **`category`** (seletor customizado com ícone + rótulo; IDs em `lib/categories.ts`), `description`, `date`; `competenceMonth` é calculada no backend a partir da data (`lib/expenseCompetence.ts`).
+    - `isFixed` (checkbox) e `dueDay`: **obrigatório (1–31)** quando fixa (validação no cliente e nas APIs).
+  - Campos compartilhados: `components/ExpenseFormFields.tsx` + `ExpenseCategorySelect` (baseado em `CategoryPicker`).
   - Tabela com:
-    - Data, categoria, descrição, tipo (fixa/variável), vencimento, mês de competência, valor.
+    - Data, **categoria** (ícone + nome), descrição, tipo (fixa/variável), vencimento, mês de competência, valor.
   - Ações **Editar** (modal com formulário preenchido + salvar) e **Excluir**.
 
 ### 4. Dashboard
@@ -229,9 +230,9 @@ Página:
 Gráficos:
 
 - `components/ExpensesPieChart.tsx` (Client Component, Recharts)
-  - Recebe `expensesByCategory` e desenha gráfico de pizza responsivo.
+  - Recebe `expensesByCategory` e desenha gráfico de pizza responsivo; rótulos de categoria via `getExpenseCategoryLabel` (`lib/categories.ts`).
 - `components/IncomesPieChart.tsx` (Client Component, Recharts)
-  - Recebe `incomesByCategory` e desenha gráfico de pizza responsivo.
+  - Recebe `incomesByCategory` e desenha gráfico de pizza responsivo; rótulos via `getIncomeCategoryLabel` (`lib/incomeCategories.ts`).
 
 ### 5. Mês selecionado na URL (`?month=YYYY-MM`)
 
@@ -268,6 +269,20 @@ Gráficos:
   - `lib/hooks/useDashboardMonth.ts` – leitura consistente de `?month=` no cliente.
 
 Isso permite escalar facilmente para novos canais (ex.: API externa, jobs de notificação) reutilizando os mesmos serviços de negócio.
+
+### Categorias (receitas e despesas)
+
+- No **banco**, `Income.category` e `Expense.category` são **strings** com IDs estáveis (ex.: `SALARY`, `FOOD`, `OTHER`). Não duplicar listas de categorias em componentes: usar sempre os módulos abaixo.
+- **Despesas**: `lib/categories.ts` — `expenseCategories` (rótulo, ícone Lucide, ordem), `EXPENSE_CATEGORY_IDS` alinhado ao **`z.enum`** em `lib/validation.ts` (`expenseSchema` / atualizações parciais). Helpers: `getCategoryById`, `getExpenseCategoryLabel`, `getExpenseCategoryDisplay` (valor desconhecido: ícone de “Outros” + texto bruto do ID).
+- **Receitas**: `lib/incomeCategories.ts` — mesma ideia (`incomeCategories`, `INCOME_CATEGORY_IDS`, `z.enum` no `incomeSchema`), com `getIncomeCategoryById`, `getIncomeCategoryLabel`, `getIncomeCategoryDisplay`.
+- **UI compartilhada**: `lib/categoryIconClass.ts` (`CATEGORY_ICON_CLASS`, classe Tailwind para tamanho/cor dos ícones); `components/CategoryPicker.tsx` (listbox acessível); `ExpenseCategorySelect` e `IncomeCategorySelect` apenas conectam dados ao picker.
+
+### Tema claro e escuro
+
+- **Tailwind** (`tailwind.config.ts`): `darkMode: "class"`. O layout e os componentes usam utilitários `dark:` para fundo, texto e bordas.
+- **`lib/theme.ts`**: chave `localStorage` (`THEME_STORAGE_KEY`), valores `light` | `dark`, funções `readStoredTheme`, `applyThemeClass` (adiciona/remove `dark` em `<html>`), `persistTheme` e o script inline **`THEME_INIT_SCRIPT`** (evita flash de tema errado antes da hidratação).
+- **`app/layout.tsx`**: `Script` com `strategy="beforeInteractive"` + `ThemeProvider` (`components/ThemeProvider.tsx`) envolvendo o conteúdo; `useTheme()` para ler/alterar o tema no cliente.
+- **Onde mudar**: página **`/settings`** (`app/settings/page.tsx`) — `ThemeSettingsSection` alterna entre claro e escuro. Acesso pelo menu **Config** na barra inferior (`BottomNav`).
 
 ---
 
@@ -320,7 +335,7 @@ docker compose up -d
 
 ### 3. Configurar variáveis de ambiente
 
-Crie um arquivo `.env` na raiz (não versionado) com pelo menos:
+Crie um arquivo `.env` na raiz (não versionado) com pelo menos (há um modelo em `.env.example`):
 
 ```env
 DATABASE_URL="postgresql://money:money_password@localhost:5432/money_control_app?schema=public"
@@ -328,7 +343,7 @@ JWT_SECRET="uma_chave_bem_secreta_aqui"
 
 # Recuperação de senha (e-mail via Resend)
 APP_URL="http://localhost:3000"
-MAIL_FROM="Saldo Certo <onboarding@resend.dev>"
+MAIL_FROM="Click Saldo <onboarding@resend.dev>"
 RESEND_API_KEY="re_xxxxxxxx"
 ```
 
@@ -339,6 +354,17 @@ RESEND_API_KEY="re_xxxxxxxx"
 - Se algo estiver incorreto na configuração ou na API, a API de “esqueci minha senha” ainda responde com sucesso (por segurança), mas o e-mail pode não ser enviado — veja os logs do servidor.
 
 Ajuste `DATABASE_URL` conforme o seu `docker-compose.yml` ou ambiente de banco.
+
+#### Link de redefinição abre 404
+
+O href do e-mail é sempre `{APP_URL ou origem do deploy}/reset-password?token=...` (ver [`getAppBaseUrl`](lib/passwordResetToken.ts)). Um **404** indica que o **host** do link não está servindo esta aplicação Next (domínio antigo, DNS apontando para outro servidor, ou `APP_URL` divergente do site real).
+
+1. Confira o domínio completo no link do e-mail e compare com onde você acessa o app.
+2. Abra `https://<seu-dominio>/reset-password` **sem** query: deve aparecer a mensagem **“Link inválido”**, não 404. Se der 404, corrija DNS ou deploy antes de mudar código.
+3. Na Vercel (ou outro host), defina **`APP_URL`** em **Production** com a URL canônica (sem barra final), faça **redeploy** e solicite um novo e-mail.
+4. Nos logs do servidor, ao enviar o e-mail, aparece `[PASSWORD_RESET_MAIL] link origin: …` com a origem usada no link (útil para conferir se bate com o domínio público).
+5. **`www` vs apex**: se `APP_URL` for `https://clicksaldo.com` e alguém abrir `https://www.clicksaldo.com/...`, o [`middleware`](middleware.ts) redireciona (308) para o host de `APP_URL`, desde que o pedido **chegue** ao Next.js. Na Vercel, adicione **ambos** os domínios em **Settings → Domains** no mesmo projeto; se `www` não estiver associado ao deploy, a Vercel pode responder 404 na borda **antes** do middleware.
+6. **Página com nome ou marca antiga (ex.: outro produto) + 404**: isso confirma que a URL **não está a servir este repositório** (Click Saldo). O registo DNS de `www` (ou outro host) ainda pode apontar para um projeto ou hospedagem antiga. Corrija na Vercel/DNS: o **CNAME/A de `www`** deve apontar para o **mesmo** deploy que o domínio canônico; remova ou desative o projeto antigo que ainda responde por `www`. Nenhuma alteração no código substitui esse alinhamento.
 
 #### Produção (ex.: Vercel)
 

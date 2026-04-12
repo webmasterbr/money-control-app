@@ -18,6 +18,7 @@
     "clsx": "latest",
     "date-fns": "latest",
     "jsonwebtoken": "latest",
+    "lucide-react": "^1.8.0",
     "next": "latest",
     "prisma": "^5.15.0",
     "react": "latest",

@@ -1,4 +1,6 @@
+import { EXPENSE_CATEGORY_IDS } from "@/lib/categories";
 import { isValidCompetenceMonth } from "@/lib/dashboardMonth";
+import { INCOME_CATEGORY_IDS } from "@/lib/incomeCategories";
 import { z } from "zod";
 
 export const registerSchema = z.object({
@@ -36,19 +38,9 @@ export const resetPasswordSchema = z.object({
     .max(100, "Senha muito longa")
 });
 
-const incomeCategoryEnum = z.enum([
-  "SALARY",
-  "FREELANCE",
-  "BUSINESS",
-  "INVESTMENTS",
-  "CASHBACK",
-  "BENEFITS_EXTRAS",
-  "OTHER"
-]);
-
 export const incomeSchema = z.object({
   amount: z.number().positive("Valor deve ser maior que zero"),
-  category: incomeCategoryEnum,
+  category: z.enum(INCOME_CATEGORY_IDS),
   description: z.string().optional(),
   date: z.string().or(z.date()), // será normalizado na API
   competenceMonth: z
@@ -63,7 +55,7 @@ export const EXPENSE_FIXED_DUE_DAY_MESSAGE =
 /** Objeto base sem refine — Zod v4 não permite `.partial()` em schemas com refinamento. */
 const expenseObjectSchema = z.object({
   amount: z.number().positive("Valor deve ser maior que zero"),
-  category: z.string().min(1, "Categoria é obrigatória"),
+  category: z.enum(EXPENSE_CATEGORY_IDS),
   description: z.string().optional(),
   date: z.string().or(z.date()),
   competenceMonth: z

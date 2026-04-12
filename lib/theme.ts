@@ -1,4 +1,4 @@
-export const THEME_STORAGE_KEY = "saldo-certo-theme";
+export const THEME_STORAGE_KEY = "click-saldo-theme";
 
 export type Theme = "light" | "dark";
 

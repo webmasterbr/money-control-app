@@ -1,25 +1,7 @@
-"use client";
+﻿"use client";
 
 import { parseApiCalendarDate } from "@/lib/calendarDate";
-
-export const expenseCategories = [
-  { value: "FOOD", label: "Alimentação" },
-  { value: "HOUSING", label: "Moradia" },
-  { value: "TRANSPORT", label: "Transporte" },
-  { value: "HEALTH", label: "Saúde" },
-  { value: "LEISURE", label: "Lazer" },
-  { value: "GIFTS", label: "Presentes" },
-  { value: "DONATIONS", label: "Doações" },
-  { value: "EDUCATION", label: "Educação" },
-  { value: "OTHER", label: "Outros" }
-];
-
-export const categoryLabelByValue = expenseCategories.reduce<
-  Record<string, string>
->((acc, category) => {
-  acc[category.value] = category.label;
-  return acc;
-}, {});
+import { ExpenseCategorySelect } from "@/components/ExpenseCategorySelect";
 
 export type ExpenseFormValues = {
   amount: string;
@@ -47,7 +29,6 @@ export function parseCurrencyInput(maskedValue: string) {
   return Number(digitsOnly) / 100;
 }
 
-/** Converte valor numérico (API) para string mascarada do input */
 export function amountToCurrencyMask(amount: number | string) {
   const cents = Math.round(Number(amount) * 100);
   return formatCurrencyInput(String(cents));
@@ -83,6 +64,7 @@ type Props = {
 
 export function ExpenseFormFields({ idPrefix, form, setForm }: Props) {
   const pid = (name: string) => `${idPrefix}-${name}`;
+  const categoryLabelId = `${idPrefix}-category-label`;
 
   return (
     <>
@@ -108,31 +90,16 @@ export function ExpenseFormFields({ idPrefix, form, setForm }: Props) {
       </div>
 
       <div className="md:col-span-4">
-        <label className="label" htmlFor={pid("category")}>
+        <label className="label" id={categoryLabelId} htmlFor={pid("category")}>
           Categoria
         </label>
-        <select
+        <ExpenseCategorySelect
           id={pid("category")}
-          className="input mt-1"
+          labelId={categoryLabelId}
           value={form.category}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, category: e.target.value }))
-          }
+          onChange={(category) => setForm((f) => ({ ...f, category }))}
           required
-        >
-          <option value="" disabled>
-            Selecione uma categoria
-          </option>
-          {form.category &&
-            !expenseCategories.some((c) => c.value === form.category) && (
-              <option value={form.category}>{form.category}</option>
-            )}
-          {expenseCategories.map((category) => (
-            <option key={category.value} value={category.value}>
-              {category.label}
-            </option>
-          ))}
-        </select>
+        />
       </div>
 
       <div className="md:col-span-6">

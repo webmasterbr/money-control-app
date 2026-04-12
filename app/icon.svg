@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="96" height="96" role="img" aria-label="Click Saldo">
+  <title>Click Saldo</title>
+  <!-- Favicon: dark mark + bg; symbol scaled to fill tab icon (browser still draws ~16px) -->
+  <rect width="48" height="48" rx="12" fill="#0d1b2e"/>
+  <g transform="translate(24,24) scale(0.62) translate(-60,-60)">
+    <circle cx="60" cy="60" r="28" fill="none" stroke="#378ADD" stroke-width="1.5"/>
+    <circle cx="60" cy="60" r="21" fill="#0C447C" opacity="0.5"/>
+    <text x="60" y="66" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="18" font-weight="500" fill="#85B7EB">$</text>
+    <polygon points="71,69 82,80 75,80 71,89 65,74" fill="#378ADD"/>
+    <circle cx="71" cy="69" r="2.5" fill="#B5D4F4"/>
+  </g>
+</svg>

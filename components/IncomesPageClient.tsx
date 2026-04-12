@@ -9,9 +9,15 @@ import {
 } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
+import { IncomeCategorySelect } from "@/components/IncomeCategorySelect";
 import { parseApiCalendarDate } from "@/lib/calendarDate";
 import { formatCompetenceMonth } from "@/lib/dashboardMonth";
 import { getDefaultDateForMonth } from "@/lib/expenseCompetence";
+import {
+  INCOME_CATEGORY_ICON_CLASS,
+  getIncomeCategoryDisplay,
+  getIncomeCategoryLabel
+} from "@/lib/incomeCategories";
 
 function formatCurrencyInput(rawValue: string) {
   const digitsOnly = rawValue.replace(/\D/g, "");
@@ -37,24 +43,6 @@ type Income = {
   description: string | null;
   date: string;
 };
-
-const incomeCategories = [
-  { value: "SALARY", label: "Salário" },
-  { value: "FREELANCE", label: "Freelance" },
-  { value: "BUSINESS", label: "Negócio" },
-  { value: "INVESTMENTS", label: "Investimentos" },
-  { value: "CASHBACK", label: "Cashback" },
-  { value: "BENEFITS_EXTRAS", label: "Benefícios / Extras" },
-  { value: "OTHER", label: "Outros" }
-];
-
-const incomeCategoryLabelByValue = incomeCategories.reduce<Record<string, string>>(
-  (acc, item) => {
-    acc[item.value] = item.label;
-    return acc;
-  },
-  {}
-);
 
 type IncomeActionsMenu =
   | { id: string; source: "card" | "table" }
@@ -276,6 +264,11 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
       return;
     }
 
+    if (!editForm.category.trim()) {
+      setEditError("Categoria é obrigatória.");
+      return;
+    }
+
     setEditSaving(true);
     try {
       const res = await fetch(`/api/incomes/${editingId}`, {
@@ -310,6 +303,11 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
     const parsedAmount = parseCurrencyInput(form.amount);
     if (!parsedAmount) {
       setError("Informe um valor válido.");
+      return;
+    }
+
+    if (!form.category.trim()) {
+      setError("Categoria é obrigatória.");
       return;
     }
 
@@ -412,27 +410,16 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
           </div>
 
           <div>
-            <label className="label" htmlFor="category">
+            <label className="label" id="income-create-category-label" htmlFor="category">
               Categoria
             </label>
-            <select
+            <IncomeCategorySelect
               id="category"
-              className="input mt-1"
+              labelId="income-create-category-label"
               value={form.category}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, category: e.target.value }))
-              }
+              onChange={(category) => setForm((f) => ({ ...f, category }))}
               required
-            >
-              <option value="" disabled>
-                Selecione uma categoria
-              </option>
-              {incomeCategories.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           <div>
@@ -501,9 +488,8 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
                   incomeActionsMenu?.id === item.id &&
                   incomeActionsMenu.source === "card";
                 const menuDomId = `income-row-menu-${item.id}`;
-                const categoryLabel =
-                  incomeCategoryLabelByValue[item.category] ??
-                  item.category;
+                const { icon: CategoryIcon, label: categoryLabel } =
+                  getIncomeCategoryDisplay(item.category);
                 const description = item.description?.trim() ?? "";
                 return (
                   <article
@@ -522,7 +508,11 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
                             {" "}
                             ·{" "}
                           </span>
-                          <span className="font-medium text-slate-800 dark:text-slate-200">
+                          <span className="inline-flex items-center gap-1.5 font-medium text-slate-800 dark:text-slate-200">
+                            <CategoryIcon
+                              className={INCOME_CATEGORY_ICON_CLASS}
+                              aria-hidden
+                            />
                             {categoryLabel}
                           </span>
                         </p>
@@ -599,6 +589,8 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
                       incomeActionsMenu?.id === item.id &&
                       incomeActionsMenu.source === "table";
                     const menuDomId = `income-row-menu-${item.id}`;
+                    const { icon: CategoryIcon, label: categoryLabel } =
+                      getIncomeCategoryDisplay(item.category);
                     return (
                       <tr
                         key={item.id}
@@ -610,8 +602,13 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
                           })}
                         </td>
                         <td className="break-words py-1.5 pr-2 align-top text-slate-800 dark:text-slate-200">
-                          {incomeCategoryLabelByValue[item.category] ??
-                            item.category}
+                          <span className="flex items-center gap-2">
+                            <CategoryIcon
+                              className={INCOME_CATEGORY_ICON_CLASS}
+                              aria-hidden
+                            />
+                            <span>{categoryLabel}</span>
+                          </span>
                         </td>
                         <td className="min-w-0 break-words py-1.5 pr-2 align-top leading-snug text-slate-600 dark:text-slate-400">
                           {item.description || "—"}
@@ -638,7 +635,7 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
                             aria-expanded={menuOpen}
                             aria-haspopup="menu"
                             aria-controls={menuDomId}
-                            aria-label={`Mais opções — ${incomeCategoryLabelByValue[item.category] ?? item.category}`}
+                            aria-label={`Mais opções — ${getIncomeCategoryLabel(item.category)}`}
                             onClick={() =>
                               setIncomeActionsMenu((m) =>
                                 m?.id === item.id && m.source === "table"
@@ -779,24 +776,18 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
               </div>
 
               <div className="md:col-span-4">
-                <label className="label" htmlFor="edit-income-category">
+                <label className="label" id="income-edit-category-label" htmlFor="edit-income-category">
                   Categoria
                 </label>
-                <select
+                <IncomeCategorySelect
                   id="edit-income-category"
-                  className="input mt-1"
+                  labelId="income-edit-category-label"
                   value={editForm.category}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, category: e.target.value }))
+                  onChange={(category) =>
+                    setEditForm((f) => ({ ...f, category }))
                   }
                   required
-                >
-                  {incomeCategories.map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
 
               <div className="md:col-span-4">
@@ -895,8 +886,7 @@ export function IncomesPageClient({ listYearMonth }: IncomesPageClientProps) {
                       locale: ptBR
                     })}{" "}
                     ·{" "}
-                    {incomeCategoryLabelByValue[pendingDeleteIncome.category] ??
-                      pendingDeleteIncome.category}
+                    {getIncomeCategoryLabel(pendingDeleteIncome.category)}
                     {pendingDeleteIncome.description
                       ? ` · ${pendingDeleteIncome.description}`
                       : ""}

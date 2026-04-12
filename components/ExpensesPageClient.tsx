@@ -12,11 +12,15 @@ import { ptBR } from "date-fns/locale/pt-BR";
 import { parseApiCalendarDate } from "@/lib/calendarDate";
 import {
   ExpenseFormFields,
-  categoryLabelByValue,
   expenseRecordToFormValues,
   parseCurrencyInput,
   type ExpenseFormValues
 } from "@/components/ExpenseFormFields";
+import {
+  EXPENSE_CATEGORY_ICON_CLASS,
+  getExpenseCategoryDisplay,
+  getExpenseCategoryLabel
+} from "@/lib/categories";
 import { formatCompetenceMonth } from "@/lib/dashboardMonth";
 import { getDefaultDateForMonth } from "@/lib/expenseCompetence";
 import { EXPENSE_FIXED_DUE_DAY_MESSAGE } from "@/lib/validation";
@@ -306,6 +310,11 @@ export function ExpensesPageClient({
       return;
     }
 
+    if (!form.category.trim()) {
+      setError("Categoria é obrigatória.");
+      return;
+    }
+
     const { parsedAmount, payload } = buildExpensePayload(
       form,
       listCompetenceMonth
@@ -349,6 +358,11 @@ export function ExpensesPageClient({
 
     if (!isValidFixedDueDay(editForm)) {
       setEditError(EXPENSE_FIXED_DUE_DAY_MESSAGE);
+      return;
+    }
+
+    if (!editForm.category.trim()) {
+      setEditError("Categoria é obrigatória.");
       return;
     }
 
@@ -480,8 +494,8 @@ export function ExpensesPageClient({
                   expenseActionsMenu?.id === item.id &&
                   expenseActionsMenu.source === "card";
                 const menuDomId = `expense-row-menu-${item.id}`;
-                const categoryLabel =
-                  categoryLabelByValue[item.category] ?? item.category;
+                const { icon: CategoryIcon, label: categoryLabel } =
+                  getExpenseCategoryDisplay(item.category);
                 const description = item.description?.trim() ?? "";
                 return (
                   <article
@@ -500,7 +514,11 @@ export function ExpensesPageClient({
                             {" "}
                             ·{" "}
                           </span>
-                          <span className="font-medium text-slate-800 dark:text-slate-200">
+                          <span className="inline-flex items-center gap-1.5 font-medium text-slate-800 dark:text-slate-200">
+                            <CategoryIcon
+                              className={EXPENSE_CATEGORY_ICON_CLASS}
+                              aria-hidden
+                            />
                             {categoryLabel}
                           </span>
                         </p>
@@ -577,6 +595,8 @@ export function ExpensesPageClient({
                       expenseActionsMenu?.id === item.id &&
                       expenseActionsMenu.source === "table";
                     const menuDomId = `expense-row-menu-${item.id}`;
+                    const { icon: CategoryIcon, label: categoryLabel } =
+                      getExpenseCategoryDisplay(item.category);
                     return (
                       <tr
                         key={item.id}
@@ -588,7 +608,13 @@ export function ExpensesPageClient({
                           })}
                         </td>
                         <td className="break-words py-1.5 pr-2 align-top text-slate-800 dark:text-slate-200">
-                          {categoryLabelByValue[item.category] ?? item.category}
+                          <span className="flex items-center gap-2">
+                            <CategoryIcon
+                              className={EXPENSE_CATEGORY_ICON_CLASS}
+                              aria-hidden
+                            />
+                            <span>{categoryLabel}</span>
+                          </span>
                         </td>
                         <td className="min-w-0 break-words py-1.5 pr-2 align-top leading-snug text-slate-600 dark:text-slate-400">
                           {item.description || "—"}
@@ -615,7 +641,7 @@ export function ExpensesPageClient({
                             aria-expanded={menuOpen}
                             aria-haspopup="menu"
                             aria-controls={menuDomId}
-                            aria-label={`Mais opções — ${categoryLabelByValue[item.category] ?? item.category}`}
+                            aria-label={`Mais opções — ${getExpenseCategoryLabel(item.category)}`}
                             onClick={() =>
                               setExpenseActionsMenu((m) =>
                                 m?.id === item.id && m.source === "table"
@@ -801,8 +827,7 @@ export function ExpensesPageClient({
                       locale: ptBR
                     })}{" "}
                     ·{" "}
-                    {categoryLabelByValue[pendingDeleteExpense.category] ??
-                      pendingDeleteExpense.category}
+                    {getExpenseCategoryLabel(pendingDeleteExpense.category)}
                     {pendingDeleteExpense.description
                       ? ` · ${pendingDeleteExpense.description}`
                       : ""}

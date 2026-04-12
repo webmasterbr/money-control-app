@@ -1,7 +1,7 @@
 import { sendEmail } from "@/lib/email/email-service";
 import { getAppBaseUrl } from "@/lib/passwordResetToken";
 
-const RESET_SUBJECT = "Redefinição de senha — Saldo Certo";
+const RESET_SUBJECT = "Redefinição de senha — Click Saldo";
 
 function getPasswordResetMailConfigIssue(): string | null {
   if (!getAppBaseUrl()) {
@@ -27,6 +27,9 @@ export async function sendPasswordResetEmail(
 
   const baseUrl = getAppBaseUrl()!;
   const link = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
+
+  // Ajuda a diagnosticar 404 no link do e-mail (host errado / APP_URL desatualizado). Nunca logar o token.
+  console.info("[PASSWORD_RESET_MAIL] link origin:", baseUrl);
 
   const html = [
     "<p>Você solicitou a redefinição de senha.</p>",
