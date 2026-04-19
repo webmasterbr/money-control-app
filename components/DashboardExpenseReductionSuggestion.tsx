@@ -17,7 +17,7 @@ export function DashboardExpenseReductionSuggestion({
 }: Props) {
   if (isPremiumLocked) {
     return (
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/10 dark:bg-[#0B1220]">
+      <div className="card p-4 sm:p-5">
         <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
           Sugestão de economia 🔒
         </h2>
@@ -39,7 +39,7 @@ export function DashboardExpenseReductionSuggestion({
   const recommendedPercent = Math.round(suggestion.recommendedPercentOfIncome);
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/10 dark:bg-[#0B1220]">
+    <div className="card p-4 sm:p-5">
       <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
         💡 Sugestão de economia
       </h2>
