@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { startOfMonth, endOfMonth } from "date-fns";
-import { parse } from "date-fns";
+import { endOfMonth, format, parse, startOfMonth } from "date-fns";
 import {
   formatDashboardMonthAbbrev,
   previousCompetenceMonth
@@ -52,6 +51,13 @@ export type ExpenseReductionSuggestion = {
   message: string;
 };
 
+export type DashboardBundle = {
+  summary: DashboardSummary;
+  prevSummary: DashboardSummary;
+  multiMonthItems: MultiMonthItem[];
+  suggestion: ExpenseReductionSuggestion | null;
+};
+
 const DEFAULT_RECOMMENDED_PERCENT = 15;
 const MIN_POTENTIAL_SAVING = 20;
 const FALLBACK_CATEGORY_LABEL = "Outros";
@@ -75,6 +81,23 @@ function normalizeCategoryLabel(label: string): string {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+type ExpenseWindowRow = {
+  id: string;
+  amount: number;
+  category: string;
+  isFixed: boolean;
+  dueDay: number | null;
+  description: string | null;
+  competenceMonth: string;
+  date: Date;
+};
+
+type IncomeWindowRow = {
+  amount: number;
+  category: string;
+  date: Date;
+};
+
 const CATEGORY_LIMITS = new Map<string, number>(
   Object.entries(CATEGORY_LIMITS_RAW).map(([label, percent]) => [
     normalizeCategoryLabel(label),
@@ -82,54 +105,131 @@ const CATEGORY_LIMITS = new Map<string, number>(
   ])
 );
 
-export async function getDashboardSummary(
-  userId: string,
-  referenceDate = new Date(),
-  options?: { fixedListMode?: FixedExpensesListMode }
-): Promise<DashboardSummary> {
-  const fixedListMode: FixedExpensesListMode =
-    options?.fixedListMode ?? "next7Days";
-  const monthStart = startOfMonth(referenceDate);
-  const monthEnd = endOfMonth(referenceDate);
+function buildYearMonths(endYearMonth: string, months: number): string[] {
+  if (months <= 0) return [];
 
-  const [monthExpenses, monthIncomes] = await Promise.all([
+  const yearMonths: string[] = [];
+  let cursor = endYearMonth;
+  for (let i = 0; i < months; i += 1) {
+    yearMonths.push(cursor);
+    cursor = previousCompetenceMonth(cursor);
+  }
+
+  yearMonths.reverse();
+  return yearMonths;
+}
+
+function isCompetenceMonth(value: string): boolean {
+  return /^\d{4}-\d{2}$/.test(value);
+}
+
+function resolveExpenseYearMonth(expense: ExpenseWindowRow): string {
+  if (isCompetenceMonth(expense.competenceMonth)) {
+    return expense.competenceMonth;
+  }
+  return format(expense.date, "yyyy-MM");
+}
+
+async function getDashboardWindowData(
+  userId: string,
+  rangeStart: Date,
+  rangeEnd: Date
+): Promise<{ expenses: ExpenseWindowRow[]; incomes: IncomeWindowRow[] }> {
+  const [expenses, incomes] = await Promise.all([
     prisma.expense.findMany({
       where: {
         userId,
         date: {
-          gte: monthStart,
-          lte: monthEnd
+          gte: rangeStart,
+          lte: rangeEnd
         }
       },
       select: {
+        id: true,
         amount: true,
         category: true,
         isFixed: true,
         dueDay: true,
-        id: true,
         description: true,
-        competenceMonth: true
+        competenceMonth: true,
+        date: true
       }
     }),
     prisma.income.findMany({
       where: {
         userId,
         date: {
-          gte: monthStart,
-          lte: monthEnd
+          gte: rangeStart,
+          lte: rangeEnd
         }
       },
       select: {
+        amount: true,
         category: true,
-        amount: true
+        date: true
       }
     })
   ]);
 
+  return {
+    expenses: expenses.map((expense) => ({
+      id: expense.id,
+      amount: Number(expense.amount),
+      category: expense.category,
+      isFixed: expense.isFixed,
+      dueDay: expense.dueDay,
+      description: expense.description,
+      competenceMonth: expense.competenceMonth,
+      date: expense.date
+    })),
+    incomes: incomes.map((income) => ({
+      amount: Number(income.amount),
+      category: income.category,
+      date: income.date
+    }))
+  };
+}
+
+function groupRowsByYearMonth(
+  expenses: ExpenseWindowRow[],
+  incomes: IncomeWindowRow[]
+): {
+  expensesByYearMonth: Map<string, ExpenseWindowRow[]>;
+  incomesByYearMonth: Map<string, IncomeWindowRow[]>;
+} {
+  const expensesByYearMonth = new Map<string, ExpenseWindowRow[]>();
+  const incomesByYearMonth = new Map<string, IncomeWindowRow[]>();
+
+  for (const expense of expenses) {
+    const yearMonth = resolveExpenseYearMonth(expense);
+    const rows = expensesByYearMonth.get(yearMonth) ?? [];
+    rows.push(expense);
+    expensesByYearMonth.set(yearMonth, rows);
+  }
+
+  for (const income of incomes) {
+    const yearMonth = format(income.date, "yyyy-MM");
+    const rows = incomesByYearMonth.get(yearMonth) ?? [];
+    rows.push(income);
+    incomesByYearMonth.set(yearMonth, rows);
+  }
+
+  return { expensesByYearMonth, incomesByYearMonth };
+}
+
+function buildSummaryFromRows(
+  referenceDate: Date,
+  monthExpenses: ExpenseWindowRow[],
+  monthIncomes: IncomeWindowRow[],
+  options?: { fixedListMode?: FixedExpensesListMode }
+): DashboardSummary {
+  const fixedListMode: FixedExpensesListMode =
+    options?.fixedListMode ?? "next7Days";
+
   let expensesTotal = 0;
   const expenseCategoryTotals = new Map<string, number>();
   for (const row of monthExpenses) {
-    const amt = Number(row.amount);
+    const amt = row.amount;
     expensesTotal += amt;
     expenseCategoryTotals.set(
       row.category,
@@ -140,7 +240,7 @@ export async function getDashboardSummary(
   let incomesTotal = 0;
   const incomeCategoryTotals = new Map<string, number>();
   for (const row of monthIncomes) {
-    const amt = Number(row.amount);
+    const amt = row.amount;
     incomesTotal += amt;
     incomeCategoryTotals.set(
       row.category,
@@ -150,9 +250,9 @@ export async function getDashboardSummary(
 
   const balance = incomesTotal - expensesTotal;
 
-  const fixedExpenses = monthExpenses.filter((e) => e.isFixed);
+  const fixedExpenses = monthExpenses.filter((expense) => expense.isFixed);
   const fixedExpensesTotal = fixedExpenses.reduce(
-    (acc, exp) => acc + Number(exp.amount),
+    (acc, expense) => acc + expense.amount,
     0
   );
 
@@ -165,9 +265,9 @@ export async function getDashboardSummary(
           if (b.dueDay == null) return -1;
           return a.dueDay - b.dueDay;
         })
-      : fixedExpenses.filter((exp) => {
-          if (exp.dueDay == null) return false;
-          return exp.dueDay >= today && exp.dueDay <= today + 7;
+      : fixedExpenses.filter((expense) => {
+          if (expense.dueDay == null) return false;
+          return expense.dueDay >= today && expense.dueDay <= today + 7;
         });
 
   const expensesByCategory = Array.from(
@@ -183,27 +283,38 @@ export async function getDashboardSummary(
     expensesTotal,
     balance,
     fixedExpensesTotal,
-    upcomingFixedExpenses: upcomingFixedExpenses.map((exp) => ({
-      id: exp.id,
-      description: exp.description,
-      category: exp.category,
-      amount: Number(exp.amount),
-      dueDay: exp.dueDay,
-      competenceMonth: exp.competenceMonth
+    upcomingFixedExpenses: upcomingFixedExpenses.map((expense) => ({
+      id: expense.id,
+      description: expense.description,
+      category: expense.category,
+      amount: expense.amount,
+      dueDay: expense.dueDay,
+      competenceMonth: expense.competenceMonth
     })),
     expensesByCategory,
     incomesByCategory
   };
 }
 
-export async function getExpenseReductionSuggestion(
+export async function getDashboardSummary(
   userId: string,
-  referenceDate: Date
-): Promise<ExpenseReductionSuggestion | null> {
-  const summary = await getDashboardSummary(userId, referenceDate, {
-    fixedListMode: "fullMonth"
-  });
+  referenceDate = new Date(),
+  options?: { fixedListMode?: FixedExpensesListMode }
+): Promise<DashboardSummary> {
+  const monthStart = startOfMonth(referenceDate);
+  const monthEnd = endOfMonth(referenceDate);
+  const { expenses, incomes } = await getDashboardWindowData(
+    userId,
+    monthStart,
+    monthEnd
+  );
 
+  return buildSummaryFromRows(referenceDate, expenses, incomes, options);
+}
+
+export function getExpenseReductionSuggestionFromSummary(
+  summary: DashboardSummary
+): ExpenseReductionSuggestion | null {
   if (summary.incomesTotal <= 0 || summary.expensesByCategory.length === 0) {
     return null;
   }
@@ -260,37 +371,134 @@ export async function getExpenseReductionSuggestion(
   return bestSuggestion;
 }
 
+export async function getExpenseReductionSuggestion(
+  userId: string,
+  referenceDate: Date
+): Promise<ExpenseReductionSuggestion | null> {
+  const summary = await getDashboardSummary(userId, referenceDate, {
+    fixedListMode: "fullMonth"
+  });
+  return getExpenseReductionSuggestionFromSummary(summary);
+}
+
 export async function getDashboardMultiMonthSummary(
   userId: string,
   endYearMonth: string,
   months = 6
 ): Promise<MultiMonthItem[]> {
-  if (months <= 0) return [];
+  const yearMonths = buildYearMonths(endYearMonth, months);
+  if (yearMonths.length === 0) return [];
 
-  const yearMonths: string[] = [];
-  let cursor = endYearMonth;
+  const rangeStart = parse(`${yearMonths[0]}-01`, "yyyy-MM-dd", new Date());
+  const rangeEnd = endOfMonth(parse(`${endYearMonth}-01`, "yyyy-MM-dd", new Date()));
+  const { expenses, incomes } = await getDashboardWindowData(userId, rangeStart, rangeEnd);
 
-  for (let i = 0; i < months; i += 1) {
-    yearMonths.push(cursor);
-    cursor = previousCompetenceMonth(cursor);
+  const expenseTotalsByYearMonth = new Map<string, number>();
+  const incomeTotalsByYearMonth = new Map<string, number>();
+  const yearMonthSet = new Set(yearMonths);
+
+  for (const expense of expenses) {
+    const yearMonth = resolveExpenseYearMonth(expense);
+    if (!yearMonthSet.has(yearMonth)) continue;
+    expenseTotalsByYearMonth.set(
+      yearMonth,
+      (expenseTotalsByYearMonth.get(yearMonth) ?? 0) + expense.amount
+    );
   }
 
-  yearMonths.reverse();
+  for (const income of incomes) {
+    const yearMonth = format(income.date, "yyyy-MM");
+    if (!yearMonthSet.has(yearMonth)) continue;
+    incomeTotalsByYearMonth.set(
+      yearMonth,
+      (incomeTotalsByYearMonth.get(yearMonth) ?? 0) + income.amount
+    );
+  }
 
-  return Promise.all(
-    yearMonths.map(async (yearMonth) => {
-      const referenceDate = parse(`${yearMonth}-01`, "yyyy-MM-dd", new Date());
-      const summary = await getDashboardSummary(userId, referenceDate, {
-        fixedListMode: "fullMonth"
-      });
+  return yearMonths.map((yearMonth) => {
+    const income = incomeTotalsByYearMonth.get(yearMonth) ?? 0;
+    const expense = expenseTotalsByYearMonth.get(yearMonth) ?? 0;
+    return {
+      yearMonth,
+      label: formatDashboardMonthAbbrev(yearMonth),
+      income,
+      expense,
+      balance: income - expense
+    };
+  });
+}
 
-      return {
-        yearMonth,
-        label: formatDashboardMonthAbbrev(yearMonth),
-        income: summary.incomesTotal,
-        expense: summary.expensesTotal,
-        balance: summary.balance
-      };
-    })
+export async function getDashboardBundle(
+  userId: string,
+  endYearMonth: string,
+  options?: {
+    referenceDate?: Date;
+    isCurrentCalendarMonth?: boolean;
+    months?: number;
+  }
+): Promise<DashboardBundle> {
+  const months = options?.months ?? 6;
+  const yearMonths = buildYearMonths(endYearMonth, months);
+
+  const prevYearMonth = previousCompetenceMonth(endYearMonth);
+  const firstRangeYearMonth =
+    yearMonths.length > 0 && yearMonths[0] < prevYearMonth
+      ? yearMonths[0]
+      : prevYearMonth;
+
+  const rangeStart = parse(`${firstRangeYearMonth}-01`, "yyyy-MM-dd", new Date());
+  const rangeEnd = endOfMonth(parse(`${endYearMonth}-01`, "yyyy-MM-dd", new Date()));
+  const { expenses, incomes } = await getDashboardWindowData(userId, rangeStart, rangeEnd);
+  const { expensesByYearMonth, incomesByYearMonth } = groupRowsByYearMonth(
+    expenses,
+    incomes
   );
+
+  const selectedReferenceDate =
+    options?.referenceDate ?? parse(`${endYearMonth}-01`, "yyyy-MM-dd", new Date());
+  const summary = buildSummaryFromRows(
+    selectedReferenceDate,
+    expensesByYearMonth.get(endYearMonth) ?? [],
+    incomesByYearMonth.get(endYearMonth) ?? [],
+    {
+      fixedListMode: options?.isCurrentCalendarMonth ? "next7Days" : "fullMonth"
+    }
+  );
+
+  const prevReferenceDate = parse(
+    `${prevYearMonth}-01`,
+    "yyyy-MM-dd",
+    new Date()
+  );
+  const prevSummary = buildSummaryFromRows(
+    prevReferenceDate,
+    expensesByYearMonth.get(prevYearMonth) ?? [],
+    incomesByYearMonth.get(prevYearMonth) ?? [],
+    {
+      fixedListMode: "fullMonth"
+    }
+  );
+
+  const multiMonthItems = yearMonths.map((yearMonth) => {
+    const monthExpenses = expensesByYearMonth.get(yearMonth) ?? [];
+    const monthIncomes = incomesByYearMonth.get(yearMonth) ?? [];
+
+    const expense = monthExpenses.reduce((acc, row) => acc + row.amount, 0);
+    const income = monthIncomes.reduce((acc, row) => acc + row.amount, 0);
+
+    return {
+      yearMonth,
+      label: formatDashboardMonthAbbrev(yearMonth),
+      income,
+      expense,
+      balance: income - expense
+    };
+  });
+
+  return {
+    summary,
+    prevSummary,
+    multiMonthItems,
+    suggestion: getExpenseReductionSuggestionFromSummary(summary)
+  };
 }

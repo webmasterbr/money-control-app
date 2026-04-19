@@ -12,9 +12,7 @@ import {
   resolveDashboardMonth
 } from "@/lib/dashboardMonth";
 import {
-  getDashboardMultiMonthSummary,
-  getDashboardSummary,
-  getExpenseReductionSuggestion
+  getDashboardBundle
 } from "@/services/dashboardService";
 import { DashboardIncomeExpenseChart } from "@/components/DashboardIncomeExpenseChart";
 import { DashboardMultiMonthChart } from "@/components/DashboardMultiMonthChart";
@@ -116,24 +114,21 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     resolveDashboardMonth(sp.month, now);
 
   const prevYm = previousCompetenceMonth(yearMonth);
-  const prevReferenceDate = parse(`${prevYm}-01`, "yyyy-MM-dd", new Date());
   const vsMonthAbbr = formatDashboardMonthAbbrev(prevYm);
 
-  const [user, summary, prevSummary, multiMonthItems, suggestion] = await Promise.all([
+  const [user, bundle] = await Promise.all([
     getUserProfile(sessionUserId),
-    getDashboardSummary(sessionUserId, referenceDate, {
-      fixedListMode: isCurrentCalendarMonth ? "next7Days" : "fullMonth"
-    }),
-    getDashboardSummary(sessionUserId, prevReferenceDate, {
-      fixedListMode: "fullMonth"
-    }),
-    getDashboardMultiMonthSummary(sessionUserId, yearMonth, 6),
-    getExpenseReductionSuggestion(sessionUserId, referenceDate)
+    getDashboardBundle(sessionUserId, yearMonth, {
+      referenceDate,
+      isCurrentCalendarMonth,
+      months: 6
+    })
   ]);
 
   if (!user) {
     redirect("/login");
   }
+  const { summary, prevSummary, multiMonthItems, suggestion } = bundle;
   const health = getFinancialHealth(summary.incomesTotal, summary.expensesTotal);
 
   const monthAnchor = parse(`${yearMonth}-01`, "yyyy-MM-dd", new Date());

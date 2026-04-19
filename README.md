@@ -370,6 +370,20 @@ O href do e-mail é sempre `{APP_URL ou origem do deploy}/reset-password?token=.
 
 No painel do projeto, em **Settings → Environment Variables**, defina pelo menos: `DATABASE_URL`, `JWT_SECRET`, `APP_URL` (URL pública do app), `MAIL_FROM`, `RESEND_API_KEY`. Use o mesmo `MAIL_FROM` verificado na Resend e uma API key com permissão de envio.
 
+Para evitar saturação de conexões do Prisma em ambiente serverless (Vercel + Supabase), use a URL do **pooler** no runtime e mantenha uma URL direta para tarefas administrativas:
+
+```env
+# Runtime da aplicação (pooler / PgBouncer)
+DATABASE_URL="postgresql://postgres.[project-ref]:[password]@[region].pooler.supabase.com:6543/postgres?sslmode=require&pgbouncer=true&connection_limit=1&pool_timeout=30"
+
+# Migrations / prisma studio (conexão direta, sem pooler)
+DIRECT_URL="postgresql://postgres:[password]@db.[project-ref].supabase.co:5432/postgres?sslmode=require"
+```
+
+- Em produção, gere o Prisma Client e rode a app com `DATABASE_URL` apontando para o pooler.
+- Use `DIRECT_URL` apenas em migrações (`prisma migrate`) e operações administrativas.
+- Se houver `P2024`, ajuste `pool_timeout` e revise paralelismo de queries por request (o dashboard foi otimizado para reduzir fan-out).
+
 ### 4. Instalar dependências
 
 ```bash
