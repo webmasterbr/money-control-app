@@ -6,9 +6,21 @@ import {
   getUserProfile,
   type CurrentUser
 } from "@/lib/auth";
-import { resolveDashboardMonth } from "@/lib/dashboardMonth";
-import { getDashboardSummary } from "@/services/dashboardService";
+import {
+  formatDashboardMonthAbbrev,
+  previousCompetenceMonth,
+  resolveDashboardMonth
+} from "@/lib/dashboardMonth";
+import {
+  getDashboardMultiMonthSummary,
+  getDashboardSummary,
+  getExpenseReductionSuggestion
+} from "@/services/dashboardService";
+import { DashboardIncomeExpenseChart } from "@/components/DashboardIncomeExpenseChart";
+import { DashboardMultiMonthChart } from "@/components/DashboardMultiMonthChart";
+import { DashboardMonthlyComparison } from "@/components/DashboardMonthlyComparison";
 import { DashboardMonthSelector } from "@/components/DashboardMonthSelector";
+import { DashboardExpenseReductionSuggestion } from "@/components/DashboardExpenseReductionSuggestion";
 import { ExpensesPieChart } from "@/components/ExpensesPieChart";
 import { IncomesPieChart } from "@/components/IncomesPieChart";
 
@@ -103,11 +115,20 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const { yearMonth, referenceDate, isCurrentCalendarMonth } =
     resolveDashboardMonth(sp.month, now);
 
-  const [user, summary] = await Promise.all([
+  const prevYm = previousCompetenceMonth(yearMonth);
+  const prevReferenceDate = parse(`${prevYm}-01`, "yyyy-MM-dd", new Date());
+  const vsMonthAbbr = formatDashboardMonthAbbrev(prevYm);
+
+  const [user, summary, prevSummary, multiMonthItems, suggestion] = await Promise.all([
     getUserProfile(sessionUserId),
     getDashboardSummary(sessionUserId, referenceDate, {
       fixedListMode: isCurrentCalendarMonth ? "next7Days" : "fullMonth"
-    })
+    }),
+    getDashboardSummary(sessionUserId, prevReferenceDate, {
+      fixedListMode: "fullMonth"
+    }),
+    getDashboardMultiMonthSummary(sessionUserId, yearMonth, 6),
+    getExpenseReductionSuggestion(sessionUserId, referenceDate)
   ]);
 
   if (!user) {
@@ -156,6 +177,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <p className="mt-2 text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
               {formatCurrency(summary.incomesTotal)}
             </p>
+            <DashboardMonthlyComparison
+              current={summary.incomesTotal}
+              previous={prevSummary.incomesTotal}
+              kind="income"
+              vsMonthAbbr={vsMonthAbbr}
+            />
           </div>
 
           <div className="card p-4">
@@ -165,6 +192,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <p className="mt-2 text-2xl font-semibold text-rose-600 dark:text-rose-400">
               {formatCurrency(summary.expensesTotal)}
             </p>
+            <DashboardMonthlyComparison
+              current={summary.expensesTotal}
+              previous={prevSummary.expensesTotal}
+              kind="expense"
+              vsMonthAbbr={vsMonthAbbr}
+            />
           </div>
 
           <div className="card p-4">
@@ -180,8 +213,19 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             >
               {formatCurrency(summary.balance)}
             </p>
+            <DashboardMonthlyComparison
+              current={summary.balance}
+              previous={prevSummary.balance}
+              kind="balance"
+              vsMonthAbbr={vsMonthAbbr}
+            />
           </div>
         </div>
+
+        <DashboardIncomeExpenseChart
+          income={summary.incomesTotal}
+          expense={summary.expensesTotal}
+        />
 
         <div className="card p-4">
           <h2 className="text-xs font-medium uppercase text-slate-600 dark:text-slate-400">
@@ -203,6 +247,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             (&gt; 80%) da receita em despesas.
           </p>
         </div>
+
+        <DashboardExpenseReductionSuggestion suggestion={suggestion} />
+
+        <DashboardMultiMonthChart items={multiMonthItems} />
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
