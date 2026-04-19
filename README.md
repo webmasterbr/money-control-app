@@ -234,6 +234,14 @@ Gráficos:
 - `components/IncomesPieChart.tsx` (Client Component, Recharts)
   - Recebe `incomesByCategory` e desenha gráfico de pizza responsivo; rótulos via `getIncomeCategoryLabel` (`lib/incomeCategories.ts`).
 
+#### Padrão de títulos de cards (dashboard)
+
+- Usar **Sentence case** em todos os títulos de card.
+- Maiúscula apenas na primeira palavra e em nomes próprios/siglas (ex.: `PIX`, `IOF`, `IR`).
+- Preposições e conectivos (`de`, `do`, `da`, `no`, `na`, `e`, `vs`) ficam em minúsculo, exceto se iniciarem o título.
+- Não usar `uppercase` em títulos principais de cards.
+- Classe padrão para título principal: `text-sm font-semibold text-slate-800 dark:text-slate-200` (usar `mb-2` quando houver conteúdo logo abaixo).
+
 ### 5. Mês selecionado na URL (`?month=YYYY-MM`)
 
 - O **dashboard** grava o mês em `?month=` ao mudar período (`DashboardMonthSelector`).

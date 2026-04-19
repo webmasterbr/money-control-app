@@ -40,9 +40,9 @@ export function DashboardIncomeExpenseChart({ income, expense }: Props) {
     >
       <h2
         id="dashboard-income-expense-chart-title"
-        className="mb-4 text-sm font-medium text-gray-700 dark:text-gray-300"
+        className="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-200"
       >
-        Receita vs Despesa
+        Receita vs despesa
       </h2>
 
       <div className="space-y-4">

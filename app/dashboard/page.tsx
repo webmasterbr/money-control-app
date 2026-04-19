@@ -166,7 +166,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       <section className="space-y-4">
         <div className="grid gap-4 md:grid-cols-3">
           <div className="card p-4">
-            <h2 className="text-xs font-medium uppercase text-slate-600 dark:text-slate-400">
+            <h2 className="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-200">
               Receitas no mês
             </h2>
             <p className="mt-2 text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
@@ -181,7 +181,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </div>
 
           <div className="card p-4">
-            <h2 className="text-xs font-medium uppercase text-slate-600 dark:text-slate-400">
+            <h2 className="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-200">
               Despesas no mês
             </h2>
             <p className="mt-2 text-2xl font-semibold text-rose-600 dark:text-rose-400">
@@ -196,7 +196,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </div>
 
           <div className="card p-4">
-            <h2 className="text-xs font-medium uppercase text-slate-600 dark:text-slate-400">
+            <h2 className="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-200">
               Saldo restante
             </h2>
             <p
@@ -223,7 +223,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         />
 
         <div className="card p-4">
-          <h2 className="text-xs font-medium uppercase text-slate-600 dark:text-slate-400">
+          <h2 className="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-200">
             Situação do mês
           </h2>
           <p
@@ -260,7 +260,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             {formatCurrency(summary.fixedExpensesTotal)}
           </p>
 
-          <h3 className="mt-4 text-xs font-medium uppercase text-slate-600 dark:text-slate-400">
+          <h3 className="mt-4 text-xs font-medium text-slate-600 dark:text-slate-400">
             {fixedSubsectionTitle}
           </h3>
           {summary.upcomingFixedExpenses.length === 0 ? (
