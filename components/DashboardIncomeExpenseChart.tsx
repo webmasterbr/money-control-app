@@ -35,7 +35,7 @@ export function DashboardIncomeExpenseChart({ income, expense }: Props) {
 
   return (
     <section
-      className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/10 dark:bg-[#0B1220]"
+      className="card p-4"
       aria-labelledby="dashboard-income-expense-chart-title"
     >
       <h2
