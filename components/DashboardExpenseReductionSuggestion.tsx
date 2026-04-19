@@ -18,7 +18,7 @@ export function DashboardExpenseReductionSuggestion({
   if (isPremiumLocked) {
     return (
       <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/10 dark:bg-[#0B1220]">
-        <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
           Sugestão de economia 🔒
         </h2>
         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
@@ -40,7 +40,7 @@ export function DashboardExpenseReductionSuggestion({
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-white/10 dark:bg-[#0B1220]">
-      <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+      <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
         💡 Sugestão de economia
       </h2>
 

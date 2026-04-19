@@ -20,7 +20,7 @@ export function DashboardMultiMonthChart({ items }: Props) {
     >
       <h2
         id="dashboard-multi-month-chart-title"
-        className="text-sm font-medium text-gray-700 dark:text-gray-300"
+        className="text-sm font-semibold text-slate-800 dark:text-slate-200"
       >
         Relatório multi-mês
       </h2>
