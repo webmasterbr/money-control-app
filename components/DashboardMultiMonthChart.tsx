@@ -15,7 +15,7 @@ export function DashboardMultiMonthChart({ items }: Props) {
 
   return (
     <section
-      className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-[#0B1220] sm:p-5"
+      className="card p-4 sm:p-5"
       aria-labelledby="dashboard-multi-month-chart-title"
     >
       <h2
