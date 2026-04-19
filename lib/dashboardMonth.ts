@@ -114,3 +114,14 @@ export function formatCompetenceMonth(ym: string): string {
   const monthAnchor = new Date(y, m - 1, 1);
   return capitalizePt(format(monthAnchor, "MMMM yyyy", { locale: ptBR }));
 }
+
+/**
+ * Abreviação do mês em pt-BR para UI compacta (ex.: `2026-02` → `Fev`).
+ */
+export function formatDashboardMonthAbbrev(ym: string): string {
+  if (!YYYY_MM.test(ym)) return ym;
+  const [y, m] = ym.split("-").map(Number);
+  const monthAnchor = new Date(y, m - 1, 1);
+  const raw = format(monthAnchor, "MMM", { locale: ptBR });
+  return capitalizePt(raw.replace(/\.$/, ""));
+}
