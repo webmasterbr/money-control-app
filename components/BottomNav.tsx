@@ -79,6 +79,7 @@ export function BottomNav() {
             className={`flex w-full max-w-[5rem] flex-col items-center justify-center gap-0.5 rounded-lg py-2 text-[0.65rem] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 ${
               pathname.startsWith("/profile") ||
               pathname.startsWith("/settings") ||
+              pathname.startsWith("/config") ||
               configOpen
                 ? "text-primary-600 dark:text-primary-400"
                 : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
@@ -114,6 +115,14 @@ export function BottomNav() {
                 onClick={() => setConfigOpen(false)}
               >
                 Perfil
+              </Link>
+              <Link
+                role="menuitem"
+                href="/config/sobre"
+                className="block px-4 py-3 text-sm text-slate-800 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+                onClick={() => setConfigOpen(false)}
+              >
+                Sobre
               </Link>
               <div className="border-t border-slate-200 px-2 py-1 dark:border-slate-800">
                 <LogoutButton className="w-full rounded-md px-2 py-2 text-left text-sm text-rose-600 transition-colors hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-rose-400 dark:hover:bg-slate-800 dark:hover:text-rose-300" />

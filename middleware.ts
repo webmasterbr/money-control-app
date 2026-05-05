@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PROTECTED_PATHS = ["/dashboard", "/incomes", "/expenses", "/profile"];
+const PROTECTED_PATHS = [
+  "/dashboard",
+  "/incomes",
+  "/expenses",
+  "/profile",
+  "/config"
+];
 
 /**
  * Redireciona para o host de APP_URL (ex.: www → apex) para evitar 404 quando o

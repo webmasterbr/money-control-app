@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import Script from "next/script";
 import { Suspense } from "react";
@@ -9,10 +9,22 @@ import { getCurrentUser } from "@/lib/auth";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#0f172a"
+};
+
 export const metadata: Metadata = {
-  title: "Click Saldo",
+  title: "ClickSaldo",
   description:
-    "Click Saldo — controle simples e poderoso das suas finanças pessoais."
+    "Controle simples e poderoso das suas finanças pessoais.",
+  applicationName: "ClickSaldo",
+  appleWebApp: {
+    capable: true,
+    title: "ClickSaldo",
+    statusBarStyle: "default"
+  }
 };
 
 export default async function RootLayout({
