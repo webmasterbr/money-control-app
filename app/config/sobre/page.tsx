@@ -68,7 +68,7 @@ export default async function SobrePage() {
             Versão
           </h2>
           <p className="mt-2 text-sm text-slate-900 dark:text-slate-100">
-            0.1.0
+            0.1.1
           </p>
         </div>
       </section>
