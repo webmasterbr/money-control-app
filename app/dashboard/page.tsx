@@ -21,6 +21,7 @@ import { DashboardMonthSelector } from "@/components/DashboardMonthSelector";
 import { DashboardExpenseReductionSuggestion } from "@/components/DashboardExpenseReductionSuggestion";
 import { ExpensesPieChart } from "@/components/ExpensesPieChart";
 import { IncomesPieChart } from "@/components/IncomesPieChart";
+import { getCategoryById } from "@/lib/categories";
 
 function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", {
@@ -96,6 +97,15 @@ function getFinancialHealth(
 function capitalizePt(text: string) {
   if (!text) return text;
   return text.charAt(0).toLocaleUpperCase("pt-BR") + text.slice(1);
+}
+
+function fixedExpenseListTitle(exp: {
+  description: string | null;
+  category: string;
+}) {
+  const trimmed = exp.description?.trim();
+  if (trimmed) return trimmed;
+  return getCategoryById(exp.category)?.label ?? "Sem descrição";
 }
 
 type DashboardPageProps = {
@@ -269,26 +279,53 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </p>
           ) : (
             <ul className="mt-2 space-y-1 text-sm">
-              {summary.upcomingFixedExpenses.map((exp) => (
-                <li
-                  key={exp.id}
-                  className="flex items-center justify-between rounded-md bg-slate-100 px-3 py-2 dark:bg-slate-900/60"
-                >
-                  <div>
-                    <p className="font-medium text-slate-900 dark:text-slate-100">
-                      {exp.description || exp.category}
-                    </p>
-                    <p className="text-xs text-slate-600 dark:text-slate-400">
-                      {exp.dueDay != null
-                        ? `Vencimento dia ${exp.dueDay} (${exp.competenceMonth})`
-                        : `Sem dia de vencimento (${exp.competenceMonth})`}
-                    </p>
-                  </div>
-                  <span className="text-sm font-semibold text-rose-600 dark:text-rose-300">
-                    {formatCurrency(exp.amount)}
-                  </span>
-                </li>
-              ))}
+              {summary.upcomingFixedExpenses.map((exp) => {
+                const dueToday =
+                  isCurrentCalendarMonth &&
+                  exp.dueDay != null &&
+                  exp.dueDay === referenceDate.getDate();
+                return (
+                  <li
+                    key={exp.id}
+                    className={`flex items-center justify-between rounded-md px-3 py-2 ${
+                      dueToday
+                        ? "border border-red-500/40 bg-red-500/5 dark:border-red-500/30 dark:bg-red-500/10"
+                        : "bg-slate-100 dark:bg-slate-900/60"
+                    }`}
+                  >
+                    <div>
+                      <p className="font-medium text-slate-900 dark:text-slate-100">
+                        {fixedExpenseListTitle(exp)}
+                      </p>
+                      <p
+                        className={
+                          dueToday
+                            ? "text-xs"
+                            : "text-xs text-slate-600 dark:text-slate-400"
+                        }
+                      >
+                        {exp.dueDay == null ? (
+                          `Sem dia de vencimento (${exp.competenceMonth})`
+                        ) : dueToday ? (
+                          <>
+                            <span className="text-red-600 dark:text-red-400">
+                              Vence hoje
+                            </span>{" "}
+                            <span className="text-slate-600 dark:text-slate-400">
+                              ({exp.competenceMonth})
+                            </span>
+                          </>
+                        ) : (
+                          `Vencimento dia ${exp.dueDay} (${exp.competenceMonth})`
+                        )}
+                      </p>
+                    </div>
+                    <span className="text-sm font-semibold text-rose-600 dark:text-rose-300">
+                      {formatCurrency(exp.amount)}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

@@ -265,10 +265,19 @@ function buildSummaryFromRows(
           if (b.dueDay == null) return -1;
           return a.dueDay - b.dueDay;
         })
-      : fixedExpenses.filter((expense) => {
-          if (expense.dueDay == null) return false;
-          return expense.dueDay >= today && expense.dueDay <= today + 7;
-        });
+      : [...fixedExpenses]
+          .filter((expense) => {
+            if (expense.dueDay == null) return false;
+            return expense.dueDay >= today && expense.dueDay <= today + 7;
+          })
+          .sort((a, b) => {
+            const da = (a.dueDay ?? 0) - today;
+            const db = (b.dueDay ?? 0) - today;
+            if (da !== db) return da - db;
+            const dayCmp = (a.dueDay ?? 0) - (b.dueDay ?? 0);
+            if (dayCmp !== 0) return dayCmp;
+            return a.id.localeCompare(b.id);
+          });
 
   const expensesByCategory = Array.from(
     expenseCategoryTotals.entries()
