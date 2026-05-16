@@ -2,8 +2,18 @@
 
 import { useMemo } from "react";
 import { parseApiCalendarDate } from "@/lib/calendarDate";
+import {
+  amountToCurrencyMask,
+  formatCurrencyInput
+} from "@/lib/currency";
 import { parseMoneyExpression } from "@/lib/parseMoneyExpression";
 import { ExpenseCategorySelect } from "@/components/ExpenseCategorySelect";
+
+export {
+  amountToCurrencyMask,
+  formatCurrencyInput,
+  parseCurrencyInput
+} from "@/lib/currency";
 
 function normalizeAmountExpression(value: string) {
   return value
@@ -20,28 +30,6 @@ export type ExpenseFormValues = {
   isFixed: boolean;
   dueDay: string;
 };
-
-export function formatCurrencyInput(rawValue: string) {
-  const digitsOnly = rawValue.replace(/\D/g, "");
-  if (!digitsOnly) return "";
-
-  const numericValue = Number(digitsOnly) / 100;
-  return numericValue.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL"
-  });
-}
-
-export function parseCurrencyInput(maskedValue: string) {
-  const digitsOnly = maskedValue.replace(/\D/g, "");
-  if (!digitsOnly) return 0;
-  return Number(digitsOnly) / 100;
-}
-
-export function amountToCurrencyMask(amount: number | string) {
-  const cents = Math.round(Number(amount) * 100);
-  return formatCurrencyInput(String(cents));
-}
 
 export function expenseRecordToFormValues(expense: {
   amount: string | number;

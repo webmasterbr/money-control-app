@@ -19,6 +19,7 @@ import { DashboardMultiMonthChart } from "@/components/DashboardMultiMonthChart"
 import { DashboardMonthlyComparison } from "@/components/DashboardMonthlyComparison";
 import { DashboardMonthSelector } from "@/components/DashboardMonthSelector";
 import { DashboardExpenseReductionSuggestion } from "@/components/DashboardExpenseReductionSuggestion";
+import { DashboardFinancialGoalsCard } from "@/components/DashboardFinancialGoalsCard";
 import { ExpensesPieChart } from "@/components/ExpensesPieChart";
 import { IncomesPieChart } from "@/components/IncomesPieChart";
 import { getCategoryById } from "@/lib/categories";
@@ -254,6 +255,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </div>
 
         <DashboardExpenseReductionSuggestion suggestion={suggestion} />
+
+        <DashboardFinancialGoalsCard />
 
         <DashboardMultiMonthChart items={multiMonthItems} />
       </section>

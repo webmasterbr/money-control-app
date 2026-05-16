@@ -92,4 +92,29 @@ export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type IncomeInput = z.infer<typeof incomeSchema>;
 export type ExpenseInput = z.infer<typeof expenseSchema>;
 
+const financialGoalDeadlineSchema = z.string().nullable().optional();
+
+export const createFinancialGoalSchema = z.object({
+  name: z.string().trim().min(1, "Nome é obrigatório"),
+  targetAmount: z.number().positive("Valor deve ser maior que zero"),
+  currentAmount: z.number().min(0, "Valor não pode ser negativo").optional(),
+  deadline: financialGoalDeadlineSchema
+});
+
+export const updateFinancialGoalSchema = createFinancialGoalSchema.partial();
+
+export const addAmountToFinancialGoalSchema = z.object({
+  amount: z.number().positive("Valor deve ser maior que zero")
+});
+
+export type CreateFinancialGoalSchemaInput = z.infer<
+  typeof createFinancialGoalSchema
+>;
+export type UpdateFinancialGoalSchemaInput = z.infer<
+  typeof updateFinancialGoalSchema
+>;
+export type AddAmountToFinancialGoalSchemaInput = z.infer<
+  typeof addAmountToFinancialGoalSchema
+>;
+
 

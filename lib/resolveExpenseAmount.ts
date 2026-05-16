@@ -1,4 +1,4 @@
-import { parseCurrencyInput } from "@/components/ExpenseFormFields";
+import { parseCurrencyInput } from "@/lib/currency";
 import { parseMoneyExpression } from "@/lib/parseMoneyExpression";
 
 export type ResolveExpenseAmountResult = {

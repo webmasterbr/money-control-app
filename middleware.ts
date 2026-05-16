@@ -4,6 +4,7 @@ const PROTECTED_PATHS = [
   "/dashboard",
   "/incomes",
   "/expenses",
+  "/goals",
   "/profile",
   "/config"
 ];

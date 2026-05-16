@@ -2,6 +2,16 @@
 
 Aplicação web minimalista para **gerenciamento de finanças pessoais**, construída com foco em simplicidade, clareza e possibilidade de evolução futura.
 
+## Funcionalidades atuais
+
+- **Autenticação** – cadastro, login, recuperação de senha.
+- **Receitas** – cadastro e listagem por mês.
+- **Despesas** – cadastro, despesas fixas, importação de fixas do mês anterior, listagem por competência.
+- **Dashboard** – totais do mês, saldo, situação financeira, gráficos, sugestão de economia e resumo de metas.
+- **Metas financeiras** – criar, editar e arquivar metas; acompanhar progresso e status (em andamento, concluída, atrasada); adicionar valor manualmente ao progresso; ver quanto falta e valor ideal por mês quando houver prazo; página `/goals`; resumo da meta principal no dashboard.
+
+As metas financeiras são orientativas e não alteram saldo, receitas ou despesas.
+
 ## Stack
 
 - **Framework**: Next.js (App Router, Server Components)
@@ -17,9 +27,9 @@ Estrutura principal de pastas:
 
 - `app/` – páginas, rotas de API (App Router) e layout
 - `components/` – componentes de UI reutilizáveis (client e server components)
-- `lib/` – helpers de infraestrutura (Prisma, auth, e-mail via Resend, validações, mês do dashboard, **tema**, **categorias**)
+- `lib/` – helpers de infraestrutura (Prisma, auth, e-mail via Resend, validações, mês do dashboard, **tema**, **categorias**, **financialGoals**, **currency**)
 - `lib/hooks/` – hooks de cliente (ex.: `useDashboardMonth`)
-- `services/` – lógica de negócio (incomes, expenses, dashboard)
+- `services/` – lógica de negócio (incomes, expenses, dashboard, **financialGoalService**)
 - `prisma/` – schema e migrações do Prisma
 - `types/` – tipos compartilhados (reservado para futuras extensões)
 
@@ -41,6 +51,7 @@ Relacionamentos:
 
 - `incomes` – receitas do usuário
 - `expenses` – despesas do usuário
+- `financialGoals` – metas financeiras do usuário
 
 ### PasswordResetToken
 
@@ -92,6 +103,23 @@ Relacionamentos:
 - `@@index([userId, competenceMonth])`
 - `@@unique([userId, competenceMonth, sourceExpenseId])` – garante no máximo uma despesa importada por raiz e mês de competência (várias linhas com `sourceExpenseId` nulo continuam permitidas no PostgreSQL).
 
+### FinancialGoal
+
+- `id` (UUID, PK)
+- `userId` (FK → User)
+- `name` (string)
+- `targetAmount`, `currentAmount` (Decimal(12,2); `currentAmount` default `0`)
+- `deadline` (DateTime opcional)
+- `isArchived` (boolean, default `false`) – exclusão na UI arquiva a meta (soft delete)
+- `createdAt`, `updatedAt`
+
+Índices:
+
+- `@@index([userId, isArchived])`
+- `@@index([userId, deadline])`
+
+Metas são **orientativas**; não há vínculo com `Income` ou `Expense`.
+
 ---
 
 ## Fluxos principais
@@ -121,7 +149,7 @@ Arquivos principais:
 - `lib/passwordResetToken.ts` – geração do token e URL base (`APP_URL`)
 - `app/forgot-password/page.tsx` – formulário “esqueci minha senha”
 - `app/reset-password/page.tsx` – validação do token (server) e formulário de nova senha
-- `middleware.ts` – protege rotas `/dashboard`, `/incomes`, `/expenses`, `/profile` redirecionando para `/login` caso não haja sessão
+- `middleware.ts` – protege rotas `/dashboard`, `/incomes`, `/expenses`, `/goals`, `/profile`, `/config` redirecionando para `/login` caso não haja sessão
 
 Fluxo resumido:
 
@@ -224,6 +252,10 @@ Página:
   - `components/DashboardMonthSelector.tsx` – navegação por mês em pt-BR (setas anterior/próximo, rótulo “Março de 2026”, botão **Hoje**) + `router.replace` para `/dashboard?month=YYYY-MM` ou `/dashboard` (mês atual).
   - Renderiza:
     - Cards com **Receitas no mês**, **Despesas no mês**, **Saldo restante** e **Situação do mês** (indicador usa os totais do mês selecionado).
+    - Gráfico receitas vs despesas e comparação com o mês anterior (`DashboardIncomeExpenseChart`, `DashboardMonthlyComparison`).
+    - **Sugestão de economia** (`DashboardExpenseReductionSuggestion`) – quando aplicável ao mês.
+    - **Metas financeiras** (`DashboardFinancialGoalsCard`) – client component que busca `GET /api/goals/summary` após o mount (não entra no `getDashboardBundle` do SSR). Sem metas: CTA **Criar meta** → `/goals`. Com meta principal: nome, valores, barra de progresso, quanto falta, ideal por mês (se houver prazo), status, **+ Adicionar valor** (modal) e **Ver todas** → `/goals`.
+    - **Relatório multi-mês** (`DashboardMultiMonthChart`) – últimos meses.
     - **Despesas fixas**: total do mês; subtítulo **Próximas a vencer (7 dias)** no mês atual ou **Vencimentos deste mês** em outros meses.
     - Gráficos de pizza: despesas e receitas por categoria.
 
@@ -249,6 +281,41 @@ Gráficos:
 - A **`BottomNav`** mantém `?month=` ao alternar entre `/dashboard`, `/incomes` e `/expenses`, desde que o valor seja válido; URLs inválidas são ignoradas no cliente e caem no mês atual na resolução server-side.
 - APIs `GET /api/incomes` e `GET /api/expenses` repetem a regra de parse (mês atual se ausente; **400** se o formato for inválido).
 
+### 6. Metas financeiras (Financial Goals)
+
+Camada de serviço:
+
+- `services/financialGoalService.ts`
+  - `getFinancialGoals`, `getFinancialGoalById`, `createFinancialGoal`, `updateFinancialGoal`, `deleteFinancialGoal` (soft delete via `isArchived`)
+  - `addAmountToFinancialGoal` – soma ao `currentAmount` sem criar receita/despesa
+  - `getFinancialGoalsSummary` – `totalGoals` e meta principal (dashboard)
+  - Todas as operações filtram por `userId`
+
+Helpers:
+
+- `lib/financialGoals.ts` – métricas (`progressPercent`, `remainingAmount`, `monthlyNeeded`, `status`) e serialização para API
+- `lib/financialGoalApi.ts` – erros HTTP das rotas de metas
+- `lib/currency.ts` – `formatBRL`, máscara BRL (`formatCurrencyInput`, `parseCurrencyInput`; compartilhado com despesas)
+
+Rotas de API:
+
+- `GET /api/goals` – lista metas ativas com métricas
+- `POST /api/goals` – cria meta
+- `GET /api/goals/[goalId]` – detalhe
+- `PATCH /api/goals/[goalId]` – atualiza
+- `DELETE /api/goals/[goalId]` – arquiva
+- `POST /api/goals/[goalId]/add-amount` – aporte manual ao progresso
+- `GET /api/goals/summary` – resumo leve para o dashboard
+
+Validação: schemas em `lib/validation.ts` (`createFinancialGoalSchema`, `updateFinancialGoalSchema`, `addAmountToFinancialGoalSchema`).
+
+UI:
+
+- `app/goals/page.tsx` + `components/FinancialGoalsPageClient.tsx` – gestão completa das metas
+- `components/DashboardFinancialGoalsCard.tsx` – card no dashboard
+
+As metas financeiras são orientativas e não alteram saldo, receitas ou despesas.
+
 ---
 
 ## Arquitetura e separação de responsabilidades
@@ -261,7 +328,7 @@ Gráficos:
   - `components/*` concentra Client Components (formulários, tabelas, gráficos).
 
 - **Negócio / domínio**:
-  - `services/*` implementa regras de negócio e acesso ao banco via Prisma.
+  - `services/*` implementa regras de negócio e acesso ao banco via Prisma (inclui `financialGoalService.ts`).
   - API Routes (`app/api/**`) fazem:
     - Autenticação/autorização (`getCurrentUser`).
     - Validação de dados (Zod).
@@ -271,7 +338,8 @@ Gráficos:
 - **Infraestrutura**:
   - `lib/prisma.ts` – singleton do Prisma.
   - `lib/auth.ts` – JWT, cookies, hash de senha.
-  - `lib/validation.ts` – schemas Zod reutilizáveis (`expenseSchema` com refine para despesa fixa; `expensePartialWithoutDueDaySchema` só para corpo do **PUT**, sem refine, por compatibilidade com Zod 4; `importFixedExpensesSchema` para o body de **`POST /api/expenses/import-fixed`**).
+  - `lib/validation.ts` – schemas Zod reutilizáveis (`expenseSchema` com refine para despesa fixa; `expensePartialWithoutDueDaySchema` só para corpo do **PUT**, sem refine, por compatibilidade com Zod 4; `importFixedExpensesSchema` para o body de **`POST /api/expenses/import-fixed`**; schemas de metas financeiras).
+  - `lib/financialGoals.ts`, `lib/financialGoalApi.ts`, `lib/currency.ts` – metas financeiras e formatação BRL.
   - `lib/dashboardMonth.ts` – mês `YYYY-MM` para páginas e APIs de listagem; `isValidCompetenceMonth` / `previousCompetenceMonth` para a importação de fixas.
   - `lib/expenseCompetence.ts` – derivação de `competenceMonth` a partir da data e `dateStringForCompetenceAndDueDay` (importação de fixas).
   - `lib/hooks/useDashboardMonth.ts` – leitura consistente de `?month=` no cliente.
@@ -405,11 +473,11 @@ npm run prisma:generate
 npm run prisma:migrate
 ```
 
-Isso vai criar as tabelas do schema (incluindo `User`, `PasswordResetToken`, `Income` e `Expense`) no banco configurado.
+Isso vai criar as tabelas do schema (incluindo `User`, `PasswordResetToken`, `Income`, `Expense` e `FinancialGoal`) no banco configurado.
 
 ### 6. Prisma Studio (visualizar e editar dados)
 
-Para inspecionar e editar registros das tabelas (`User`, `Income`, `Expense`), use o Prisma Studio:
+Para inspecionar e editar registros das tabelas (`User`, `Income`, `Expense`, `FinancialGoal`), use o Prisma Studio:
 
 ```bash
 npm run prisma:studio
@@ -437,6 +505,7 @@ Fluxo sugerido:
    - `/dashboard` – visão geral (opcional: `?month=YYYY-MM` para outro mês).
    - `/incomes` – receitas do mês (mesma query opcional; alinhada ao dashboard se vier pela BottomNav).
    - `/expenses` – despesas por **competência** do mês (mesma ideia); use **Importar despesas fixas** para copiar as fixas do mês anterior para o mês em tela.
+   - `/goals` – metas financeiras (criar, progresso, aporte manual).
 
 ---
 
