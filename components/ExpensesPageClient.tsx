@@ -468,7 +468,7 @@ export function ExpensesPageClient({
             type="button"
             disabled={importingFixed}
             onClick={handleImportFixed}
-            className="inline-flex shrink-0 items-center justify-center rounded-lg border border-slate-300/90 bg-transparent px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-slate-400 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700/80 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-900/80 dark:hover:text-slate-200 dark:focus-visible:ring-offset-slate-950"
+            className="inline-flex shrink-0 items-center justify-center rounded-lg border border-blue-300 bg-transparent px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:border-blue-400 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-blue-800 dark:text-blue-400 dark:hover:border-blue-700 dark:hover:bg-blue-950/30 dark:focus-visible:ring-offset-slate-950"
           >
             {importingFixed ? "Importando…" : "Importar despesas fixas"}
           </button>
