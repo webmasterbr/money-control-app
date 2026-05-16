@@ -13,9 +13,9 @@ import { parseApiCalendarDate } from "@/lib/calendarDate";
 import {
   ExpenseFormFields,
   expenseRecordToFormValues,
-  parseCurrencyInput,
   type ExpenseFormValues
 } from "@/components/ExpenseFormFields";
+import { resolveExpenseAmount } from "@/lib/resolveExpenseAmount";
 import {
   EXPENSE_CATEGORY_ICON_CLASS,
   getExpenseCategoryDisplay,
@@ -59,11 +59,12 @@ function buildExpensePayload(
   form: ExpenseFormValues,
   competenceMonth: string
 ) {
-  const parsedAmount = parseCurrencyInput(form.amount);
+  const { value, isValid } = resolveExpenseAmount(form.amount);
   return {
-    parsedAmount,
+    value,
+    isValid,
     payload: {
-      amount: parsedAmount,
+      amount: value!,
       category: form.category,
       description: form.description.trim() || undefined,
       date: form.date,
@@ -315,11 +316,11 @@ export function ExpensesPageClient({
       return;
     }
 
-    const { parsedAmount, payload } = buildExpensePayload(
+    const { value, isValid, payload } = buildExpensePayload(
       form,
       listCompetenceMonth
     );
-    if (!parsedAmount) {
+    if (!isValid || value == null) {
       setError("Informe um valor válido.");
       return;
     }
@@ -366,11 +367,11 @@ export function ExpensesPageClient({
       return;
     }
 
-    const { parsedAmount, payload } = buildExpensePayload(
+    const { value, isValid, payload } = buildExpensePayload(
       editForm,
       listCompetenceMonth
     );
-    if (!parsedAmount) {
+    if (!isValid || value == null) {
       setEditError("Informe um valor válido.");
       return;
     }

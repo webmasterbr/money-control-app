@@ -1,7 +1,16 @@
-﻿"use client";
+"use client";
 
+import { useMemo } from "react";
 import { parseApiCalendarDate } from "@/lib/calendarDate";
+import { parseMoneyExpression } from "@/lib/parseMoneyExpression";
 import { ExpenseCategorySelect } from "@/components/ExpenseCategorySelect";
+
+function normalizeAmountExpression(value: string) {
+  return value
+    .replace(/R\$/gi, "")
+    .replace(/[^\d.,+\s]/g, "")
+    .replace(/\s+/g, " ");
+}
 
 export type ExpenseFormValues = {
   amount: string;
@@ -66,6 +75,12 @@ export function ExpenseFormFields({ idPrefix, form, setForm }: Props) {
   const pid = (name: string) => `${idPrefix}-${name}`;
   const categoryLabelId = `${idPrefix}-category-label`;
 
+  const amountHasExpression = form.amount.includes("+");
+  const amountExpressionFeedback = useMemo(() => {
+    if (!amountHasExpression) return null;
+    return parseMoneyExpression(form.amount);
+  }, [amountHasExpression, form.amount]);
+
   return (
     <>
       <div className="md:col-span-2">
@@ -77,16 +92,36 @@ export function ExpenseFormFields({ idPrefix, form, setForm }: Props) {
           type="text"
           inputMode="decimal"
           className="input mt-1"
-          placeholder="R$ 0,00"
+          placeholder="42,70 ou 12,50 + 8,30"
           value={form.amount}
-          onChange={(e) =>
+          onChange={(e) => {
+            const v = e.target.value;
             setForm((f) => ({
               ...f,
-              amount: formatCurrencyInput(e.target.value)
-            }))
-          }
+              amount: v.includes("+")
+                ? normalizeAmountExpression(v)
+                : formatCurrencyInput(v)
+            }));
+          }}
           required
         />
+        {amountHasExpression && amountExpressionFeedback?.isValid ? (
+          <p className="mt-1 text-xs">
+            <span className="text-slate-600 dark:text-slate-400">Total: </span>
+            <span className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-300">
+              {amountExpressionFeedback.value!.toLocaleString("pt-BR", {
+                style: "currency",
+                currency: "BRL"
+              })}
+            </span>
+          </p>
+        ) : null}
+        {amountHasExpression &&
+        form.amount.trim() &&
+        amountExpressionFeedback &&
+        !amountExpressionFeedback.isValid ? (
+          <p className="mt-1 error-text">Valor inválido</p>
+        ) : null}
       </div>
 
       <div className="md:col-span-4">
